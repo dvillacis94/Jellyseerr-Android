@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Seerr</string>
+    <string name="welcome_title">Welcome to Seerr</string>
+    <string name="welcome_message">This app is still being built. Connecting to a server comes next.</string>
+</resources>

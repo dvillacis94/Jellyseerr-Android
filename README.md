@@ -2,7 +2,7 @@
 
 A native Android client for [Seerr](https://github.com/seerr-team/seerr), written in Kotlin with Jetpack Compose. It is an unofficial companion app and is not affiliated with the Seerr project.
 
-**Status: early development.** The app doesn't do anything useful yet. See [PLAN.md](PLAN.md) for what is being built and in what order.
+**Status: early development.** The app doesn't do anything useful yet.
 
 ## Build
 

@@ -1,0 +1,4 @@
+<resources>
+    <!-- The icon's background, from Seerr's logo. -->
+    <color name="seerr_night">#131928</color>
+</resources>

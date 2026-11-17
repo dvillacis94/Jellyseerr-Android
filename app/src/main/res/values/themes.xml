@@ -1,0 +1,10 @@
+<resources>
+    <!-- The launch screen: the eye on navy, matching the icon. Compose takes over once the app runs. -->
+    <style name="Theme.Seerr.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/seerr_night</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Seerr</item>
+    </style>
+
+    <style name="Theme.Seerr" parent="android:Theme.Material.NoActionBar" />
+</resources>

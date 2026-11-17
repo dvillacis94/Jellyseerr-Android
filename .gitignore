@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+
+# Android Studio
+/.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Machine-specific SDK path
+local.properties
+
+# Secrets: never commit these (this repo is public)
+google-services.json
+*.jks
+*.keystore
+keystore.properties
+*.p8
+*.pem
+.env
+
+# macOS
+.DS_Store

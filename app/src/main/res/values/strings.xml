@@ -1,5 +1,48 @@
 <resources>
     <string name="app_name">Seerr</string>
-    <string name="welcome_title">Welcome to Seerr</string>
-    <string name="welcome_message">This app is still being built. Connecting to a server comes next.</string>
+
+    <string name="setup_title">Welcome to Seerr</string>
+    <string name="setup_subtitle">Request movies and series from your media server. Start by connecting to your Seerr server.</string>
+    <string name="setup_address_label">Server address</string>
+    <string name="setup_address_hint">requests.example.com</string>
+    <string name="setup_address_help">The address you use to open Seerr in a browser, like requests.example.com or 192.168.1.10:5055.</string>
+    <string name="setup_allow_local_network">Server on your home network? Allow local network access</string>
+    <string name="setup_continue">Continue</string>
+
+    <string name="error_empty_address">Enter your Seerr server\'s address.</string>
+    <string name="error_invalid_address">That doesn\'t look like a valid address.</string>
+    <string name="error_unreachable">Couldn\'t reach the server. Check the address and that the server is running.</string>
+    <string name="error_untrusted_certificate">The server\'s HTTPS certificate isn\'t trusted. Self-signed certificates aren\'t supported yet.</string>
+    <string name="error_not_seerr">The server responded, but it doesn\'t look like Seerr.</string>
+    <string name="error_not_initialized">This server hasn\'t been set up yet. Finish setup in your browser first.</string>
+
+    <string name="login_not_secure">Not secure</string>
+    <string name="login_not_secure_detail">This server uses http://, so your password is sent without encryption.</string>
+    <string name="login_plex">Sign in with Plex</string>
+    <string name="login_plex_waiting">Waiting for Plex…</string>
+    <string name="login_plex_cancel">Cancel</string>
+    <string name="login_or">or</string>
+    <string name="login_mode_media_server">%1$s</string>
+    <string name="login_mode_local">Seerr account</string>
+    <string name="login_username">Username</string>
+    <string name="login_email">Email</string>
+    <string name="login_password">Password</string>
+    <string name="login_sign_in">Sign in</string>
+    <string name="login_no_methods">This server has no sign-in method turned on for apps. Ask the server owner to enable one in Seerr\'s settings.</string>
+    <string name="login_change_server">Change server</string>
+
+    <string name="sign_in_invalid_credentials">Incorrect username or password.</string>
+    <string name="sign_in_access_denied">Your account doesn\'t have access to this server. Ask the server owner to import or invite you.</string>
+    <string name="sign_in_method_disabled">This sign-in method is disabled on the server.</string>
+    <string name="sign_in_unreachable">Couldn\'t reach the server. Check your connection and try again.</string>
+    <string name="sign_in_plex_timed_out">The Plex sign-in timed out. Please try again.</string>
+
+    <string name="unreachable_title">Can\'t reach the server</string>
+    <string name="unreachable_message">Check your connection and that %1$s is running.</string>
+    <string name="unreachable_message_unknown">Check your connection and that the server is running.</string>
+    <string name="unreachable_retry">Try again</string>
+
+    <string name="home_signed_in_as">Signed in as %1$s</string>
+    <string name="home_coming_soon">The rest of the app is still being built.</string>
+    <string name="home_sign_out">Sign out</string>
 </resources>

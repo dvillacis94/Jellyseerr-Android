@@ -41,5 +41,27 @@ object Routes {
     fun discoverTv(page: Int) = paged("/discover/tv", page)
     fun discoverTvUpcoming(page: Int) = paged("/discover/tv/upcoming", page)
 
+    // Title pages. `/movie/{id}` and `/tv/{id}` include credits, videos and whether the user watchlisted it.
+    fun movieDetail(id: Int) = Route("GET", "/movie/$id")
+    fun movieRecommendations(id: Int, page: Int) = paged("/movie/$id/recommendations", page)
+    fun movieSimilar(id: Int, page: Int) = paged("/movie/$id/similar", page)
+    fun tvDetail(id: Int) = Route("GET", "/tv/$id")
+    fun tvRecommendations(id: Int, page: Int) = paged("/tv/$id/recommendations", page)
+    fun tvSimilar(id: Int, page: Int) = paged("/tv/$id/similar", page)
+    fun collection(id: Int) = Route("GET", "/collection/$id")
+
+    // The user's own watchlist: Seerr's, or Plex's for Plex users.
+    fun discoverWatchlist(page: Int) = paged("/discover/watchlist", page)
+
+    fun addWatchlist(tmdbId: Int, mediaType: String, title: String?) =
+        Route("POST", "/watchlist", buildJsonObject {
+            put("tmdbId", tmdbId)
+            put("mediaType", mediaType)
+            if (title != null) put("title", title)
+        })
+
+    fun removeWatchlist(tmdbId: Int, mediaType: String) =
+        Route("DELETE", "/watchlist/$tmdbId", query = listOf("mediaType" to mediaType))
+
     private fun paged(path: String, page: Int) = Route("GET", path, query = listOf("page" to "$page"))
 }

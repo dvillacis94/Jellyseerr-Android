@@ -72,6 +72,27 @@
     <string name="list_upcoming_movies">Upcoming Movies</string>
     <string name="list_popular_series">Popular Series</string>
     <string name="list_upcoming_series">Upcoming Series</string>
+    <string name="list_watchlist">Watchlist</string>
+    <string name="detail_trailer">Trailer</string>
+    <string name="detail_watchlist_add">Add to watchlist</string>
+    <string name="detail_watchlist_remove">Remove from watchlist</string>
+    <string name="detail_watchlist_error">Couldn\'t update the watchlist.</string>
+    <string name="detail_part_of">Part of %1$s</string>
+    <string name="detail_a_collection">a collection</string>
+    <string name="fact_status">Status</string>
+    <string name="fact_release_date">Release date</string>
+    <string name="fact_first_aired">First aired</string>
+    <string name="fact_runtime">Runtime</string>
+    <string name="fact_episode_length">Episode length</string>
+    <string name="fact_seasons">Seasons</string>
+    <string name="fact_episodes">Episodes</string>
+    <string name="fact_genres">Genres</string>
+    <string name="fact_studio">Studio</string>
+    <string name="fact_network">Network</string>
+    <string name="shelf_cast">Cast</string>
+    <string name="shelf_recommendations">Recommendations</string>
+    <string name="shelf_similar">Similar</string>
+    <string name="collection_movies">Movies</string>
     <string name="tab_coming_soon">%1$s is still being built.</string>
 
     <string name="home_signed_in_as">Signed in as %1$s</string>

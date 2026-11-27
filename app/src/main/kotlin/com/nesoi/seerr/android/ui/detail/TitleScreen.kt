@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,6 +59,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nesoi.seerr.android.R
+import com.nesoi.seerr.android.core.PublicSettings
+import com.nesoi.seerr.android.core.User
+import com.nesoi.seerr.android.media.RequestModel
+import com.nesoi.seerr.android.media.canBeRequestedBy
 import com.nesoi.seerr.android.media.CastMember
 import com.nesoi.seerr.android.media.DetailState
 import com.nesoi.seerr.android.media.MediaFormat
@@ -86,6 +91,9 @@ fun TitleScreen(
     model: TitleModel,
     watchlist: WatchlistStore,
     canEditWatchlist: Boolean,
+    user: User,
+    settings: PublicSettings?,
+    newRequest: (TitleDetails) -> RequestModel,
     onBack: () -> Unit,
     onOpen: (MediaItem) -> Unit,
     onOpenCollection: (Int) -> Unit,
@@ -109,7 +117,7 @@ fun TitleScreen(
                 },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                TitleContent(current.value, model, onOpen, onOpenCollection)
+                TitleContent(current.value, model, user, settings, newRequest, onOpen, onOpenCollection)
             }
         }
         // The back button stays put, whatever the page is doing.
@@ -184,14 +192,24 @@ private fun WatchlistButton(details: TitleDetails, watchlist: WatchlistStore) {
 private fun TitleContent(
     details: TitleDetails,
     model: TitleModel,
+    user: User,
+    settings: PublicSettings?,
+    newRequest: (TitleDetails) -> RequestModel,
     onOpen: (MediaItem) -> Unit,
     onOpenCollection: (Int) -> Unit,
 ) {
     val uri = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
+    var requesting by remember { mutableStateOf<RequestModel?>(null) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Header(details)
 
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (details.canBeRequestedBy(user, settings)) {
+                Button(onClick = { requesting = newRequest(details) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.detail_request))
+                }
+            }
             details.trailerUrl()?.let { url ->
                 OutlinedButton(onClick = { uri.openUri(url) }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.PlayArrow, contentDescription = null)
@@ -214,6 +232,15 @@ private fun TitleContent(
         CastShelf(details.credits?.cast.orEmpty())
         MediaShelf(stringResource(R.string.shelf_recommendations), model.recommendations, onOpen)
         MediaShelf(stringResource(R.string.shelf_similar), model.similar, onOpen)
+    }
+
+    requesting?.let { request ->
+        RequestSheet(
+            request,
+            onDismiss = { requesting = null },
+            // The page shows the title's new status once it has been fetched again.
+            onRequested = { scope.launch { model.refresh() } },
+        )
     }
 }
 

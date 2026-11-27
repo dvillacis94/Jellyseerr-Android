@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -71,6 +72,7 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
 
     val open: (MediaItem) -> Unit = { item -> item.detailRoute?.let { navController.navigate(it) } }
     val back: () -> Unit = { navController.popBackStack() }
+    val settings by model.settings.collectAsStateWithLifecycle()
 
     Scaffold(
         bottomBar = {
@@ -111,14 +113,14 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
             }
             composable("$MOVIE_ROUTE/{id}", arguments = idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->
-                    TitleScreen(model.title(TitleType.Movie, id), model.watchlist, model.canEditWatchlist, back, open) {
+                    TitleScreen(model.title(TitleType.Movie, id), model.watchlist, model.canEditWatchlist, user, settings, model::requestModel, back, open) {
                         navController.navigate("$COLLECTION_ROUTE/$it")
                     }
                 }
             }
             composable("$TV_ROUTE/{id}", arguments = idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->
-                    TitleScreen(model.title(TitleType.Series, id), model.watchlist, model.canEditWatchlist, back, open) {}
+                    TitleScreen(model.title(TitleType.Series, id), model.watchlist, model.canEditWatchlist, user, settings, model::requestModel, back, open) {}
                 }
             }
             composable("$COLLECTION_ROUTE/{id}", arguments = idArgument) { entry ->

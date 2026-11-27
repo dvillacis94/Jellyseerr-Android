@@ -92,6 +92,9 @@ data class MovieDetails(
     data class CollectionRef(val id: Int, val name: String? = null)
 }
 
+@Serializable
+data class TvSeason(val seasonNumber: Int, val name: String? = null, val episodeCount: Int? = null, val airDate: String? = null)
+
 /** `GET /tv/{id}`. */
 @Serializable
 data class TvDetails(
@@ -103,6 +106,7 @@ data class TvDetails(
     val episodeRunTime: List<Int> = emptyList(),
     val numberOfSeasons: Int? = null,
     val numberOfEpisodes: Int? = null,
+    val seasons: List<TvSeason> = emptyList(),
     override val genres: List<Genre> = emptyList(),
     val networks: List<Company> = emptyList(),
     override val posterPath: String? = null,

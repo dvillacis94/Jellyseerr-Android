@@ -42,7 +42,38 @@
     <string name="unreachable_message_unknown">Check your connection and that the server is running.</string>
     <string name="unreachable_retry">Try again</string>
 
+    <string name="tab_discover">Discover</string>
+    <string name="tab_movies">Movies</string>
+    <string name="tab_series">Series</string>
+    <string name="tab_requests">Requests</string>
+    <string name="tab_profile">Profile</string>
+
+    <string name="discover_search_hint">Movies, series, people</string>
+    <string name="discover_search_clear">Clear search</string>
+    <string name="discover_no_results">No results for \"%1$s\"</string>
+    <string name="shelf_see_all">See all</string>
+    <string name="list_back">Back</string>
+    <string name="list_empty">Nothing here yet.</string>
+    <string name="error_try_again">Try again</string>
+    <string name="error_generic">Something went wrong.</string>
+    <string name="list_untitled">Untitled</string>
+    <string name="type_movie">Movie</string>
+    <string name="type_series">Series</string>
+    <string name="type_person">Person</string>
+    <string name="type_collection">Collection</string>
+    <string name="status_available">Available</string>
+    <string name="status_partial">Partially available</string>
+    <string name="status_processing">Processing</string>
+    <string name="status_pending">Pending</string>
+    <string name="status_blocklisted">Blocklisted</string>
+    <string name="status_deleted">Deleted</string>
+    <string name="list_trending">Trending</string>
+    <string name="list_popular_movies">Popular Movies</string>
+    <string name="list_upcoming_movies">Upcoming Movies</string>
+    <string name="list_popular_series">Popular Series</string>
+    <string name="list_upcoming_series">Upcoming Series</string>
+    <string name="tab_coming_soon">%1$s is still being built.</string>
+
     <string name="home_signed_in_as">Signed in as %1$s</string>
-    <string name="home_coming_soon">The rest of the app is still being built.</string>
     <string name="home_sign_out">Sign out</string>
 </resources>

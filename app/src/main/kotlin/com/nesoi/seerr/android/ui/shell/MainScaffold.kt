@@ -44,6 +44,7 @@ import com.nesoi.seerr.android.media.detailRoute
 import com.nesoi.seerr.android.media.SignedInModel
 import com.nesoi.seerr.android.ui.detail.CollectionScreen
 import com.nesoi.seerr.android.ui.detail.TitleScreen
+import com.nesoi.seerr.android.ui.requests.RequestsScreen
 import com.nesoi.seerr.android.ui.discover.DiscoverScreen
 import com.nesoi.seerr.android.ui.media.MediaGridScreen
 
@@ -103,7 +104,7 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
             }
             composable(AppTab.Movies.route) { ComingSoon(R.string.tab_movies) }
             composable(AppTab.Series.route) { ComingSoon(R.string.tab_series) }
-            composable(AppTab.Requests.route) { ComingSoon(R.string.tab_requests) }
+            composable(AppTab.Requests.route) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
             composable(AppTab.Profile.route) { ProfileScreen(user, onSignOut, onChangeServer) }
             composable("$LIST_ROUTE/{list}") { entry ->
                 val list = entry.arguments?.getString("list")?.let { name -> MediaList.entries.firstOrNull { it.name == name } }

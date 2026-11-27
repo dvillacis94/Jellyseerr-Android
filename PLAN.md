@@ -2,7 +2,7 @@
 
 Written 2026-11-17, updated 2026-11-26. A native Android client for Seerr with the same features as the iOS app (`seerr-native`, build 8).
 
-**Status:** phase 0 is merged (#1). Phase 1 is open as PR #2. Phases 2 to 10 have not been started.
+**Status:** phases 0 and 1 are merged (#1, #2). Phase 2 is in review. Phases 3 to 10 have not been started.
 
 Repo: `git@github.com:dvillacis94/Jellyseerr-Android.git` (public).
 
@@ -39,7 +39,7 @@ Mirrors the iOS app, so behaviour and tests can be ported one to one.
 | `UserDefaultsStorage` | DataStore |
 | `AsyncImage` | Coil |
 | `ASWebAuthenticationSession` (Plex) | Chrome Custom Tabs, with the same PIN polling |
-| `PagedLoader`, `PagedList` | The same two classes, built once and shared. **Not built yet:** phase 1 left them out to avoid unused code. Add them in phase 2 |
+| `PagedLoader`, `PagedList` | The same two classes, built once and shared. `PagedLoader` is built (phase 2). `PagedList` for Requests and Issues comes in phase 5, so it isn't unused scaffolding |
 | Passing dependencies through initialisers | The same: one `AppContainer` built at launch, no DI framework. Screen logic sits in plain state-holder classes that take a `CoroutineScope` and expose `StateFlow`, so tests need no Android |
 | Swift Testing with `StubURLProtocol` | JUnit with OkHttp `MockWebServer` and coroutines-test |
 | XcodeGen | Gradle with a version catalog |
@@ -66,8 +66,8 @@ One branch and one PR per phase, in the Android repo unless noted. Each PR has u
 | # | Phase | Contents |
 |---|---|---|
 | 0 ✅ | Project setup | Gradle project, `.gitignore`, app icon and colours from the iOS design, empty app that builds and runs, README |
-| 1 🔍 | Server and sign-in | Server address entry with the HTTPS rules, sign-in with Plex, local account and Jellyfin, session restore, sign-out, change server. **PR #2, in review.** 56 unit tests; checked on an Android 17 emulator. A real Plex sign-in has not been tried |
-| 2 | App shell and Discover | Five tabs (Discover, Movies, Series, Requests, Profile), Discover shelves, global search, media cards with status. Also introduces `PagedLoader`, `PagedList`, Coil for images, and the unauthorized handler (a 401 returns the user to sign-in). Movies, Series, Requests and Profile start as empty tabs |
+| 1 ✅ | Server and sign-in | Server address entry with the HTTPS rules, sign-in with Plex, local account and Jellyfin, session restore, sign-out, change server. Merged as #2. Sign-in, including Plex, was checked by the owner on an Android 17 emulator |
+| 2 🔍 | App shell and Discover | Five tabs (Discover, Movies, Series, Requests, Profile), Discover shelves, global search, media cards with status. Introduces `PagedLoader`, Coil, Navigation Compose and the unauthorized handler (a 401 returns the user to sign-in). Movies, Series and Requests are placeholders; Profile only has Sign out and Change server. **In review.** Left for later: the watchlist shelf (phase 3, with the watchlist button), tapping a card (phase 3), and `PagedList` (phase 5, when Requests needs it) |
 | 3 | Details | Movie, series and collection pages, cast, recommendations and similar, watchlist button |
 | 4 | Requesting | Request sheet: seasons, 4K, quota, advanced Radarr and Sonarr options, requesting for another user |
 | 5 | Requests tab | Paged list, filter and sort, approve, decline, delete, review sheet |

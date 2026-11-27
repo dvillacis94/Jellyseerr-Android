@@ -30,6 +30,10 @@ class ApiClient(
     @Volatile
     var baseUrl: HttpUrl? = baseUrl
 
+    /** Called when the server turns down a call that needs a session, so the app can ask for sign-in again. */
+    @Volatile
+    var onUnauthorized: (() -> Unit)? = null
+
     /**
      * @param baseUrl Overrides the configured server, such as to probe a candidate during setup.
      * @throws IOException when the server can't be reached.
@@ -50,7 +54,9 @@ class ApiClient(
 
     private suspend fun send(route: Route, override: HttpUrl?): String {
         val base = override ?: baseUrl ?: throw IOException("No server is configured")
-        val url = base.newBuilder().addPathSegments("api/v1" + route.path).build()
+        val url = base.newBuilder().addPathSegments("api/v1" + route.path).apply {
+            route.query.forEach { (name, value) -> addQueryParameter(name, value) }
+        }.build()
 
         val builder = Request.Builder().url(url).header("Accept", "application/json")
         if (route.method == "GET") {
@@ -69,6 +75,7 @@ class ApiClient(
             ?: http
         client.newCall(builder.build()).await().use { response ->
             val text = response.body.string()
+            if (response.code == 401 && route.requiresSession) onUnauthorized?.invoke()
             validate(response.code, text)
             return text
         }

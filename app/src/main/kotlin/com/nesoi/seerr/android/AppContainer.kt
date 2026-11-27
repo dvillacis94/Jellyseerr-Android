@@ -23,7 +23,7 @@ class AppContainer(private val context: Context) {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val api = ApiClient(http, cookies)
+    val api = ApiClient(http, cookies)
 
     val authService = AuthService(api, cookies, DataStoreServerPreferences(context))
 

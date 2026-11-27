@@ -44,6 +44,17 @@ class AuthService(
     /** The server API calls go to, once one is configured. */
     val serverUrl: HttpUrl? get() = api.baseUrl
 
+    /** Called when the server says the session ran out, after it was dropped on this device. */
+    @Volatile
+    var onSessionExpired: (() -> Unit)? = null
+
+    init {
+        api.onUnauthorized = {
+            cookies.clear()
+            onSessionExpired?.invoke()
+        }
+    }
+
     // Server
 
     /**

@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nesoi.seerr.android.R
 import com.nesoi.seerr.android.ui.onboarding.LoginScreen
 import com.nesoi.seerr.android.ui.onboarding.ServerSetupScreen
+import com.nesoi.seerr.android.ui.shell.MainScaffold
 
 @Composable
 fun AppRoot(viewModel: AppViewModel) {
@@ -40,12 +41,7 @@ fun AppRoot(viewModel: AppViewModel) {
             Button(onClick = viewModel::start) { Text(stringResource(R.string.unreachable_retry)) }
             OutlinedButton(onClick = viewModel::changeServer) { Text(stringResource(R.string.login_change_server)) }
         }
-        is AppState.SignedIn -> CenteredColumn {
-            Text(stringResource(R.string.home_signed_in_as, current.user.displayNameOrEmail), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-            Text(stringResource(R.string.home_coming_soon), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = viewModel::signOut) { Text(stringResource(R.string.home_sign_out)) }
-            OutlinedButton(onClick = viewModel::changeServer) { Text(stringResource(R.string.login_change_server)) }
-        }
+        is AppState.SignedIn -> MainScaffold(current.user, current.model, onSignOut = viewModel::signOut, onChangeServer = viewModel::changeServer)
     }
 }
 

@@ -76,7 +76,9 @@ fun MediaCard(item: MediaItem, modifier: Modifier = Modifier) {
                 placeholder = if (item is MediaItem.Person) Icons.Filled.Person else Icons.Filled.Movie,
             )
             Row(
-                Modifier.fillMaxWidth().height(StatusIndicatorSize).padding(horizontal = 7.dp).padding(top = 7.dp),
+                // Pad first, then fix the height: padding applied after `height` shrinks the row, and the
+        // pill and circle get squeezed into ovals.
+                Modifier.fillMaxWidth().padding(7.dp).height(StatusIndicatorSize),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 item.kind?.let { TypePill(it) }
@@ -117,7 +119,7 @@ val MediaItem.kind: MediaKind?
         else -> null
     }
 
-private val StatusIndicatorSize = 25.dp
+private val StatusIndicatorSize = 23.dp
 
 @Composable
 fun TypePill(kind: MediaKind) {
@@ -153,7 +155,7 @@ fun StatusIndicator(status: MediaStatus, modifier: Modifier = Modifier) {
             .background(status.color, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(symbol, contentDescription = stringResource(status.label), tint = Color.White, modifier = Modifier.size(13.dp))
+        Icon(symbol, contentDescription = stringResource(status.label), tint = Color.White, modifier = Modifier.size(12.dp))
     }
 }
 

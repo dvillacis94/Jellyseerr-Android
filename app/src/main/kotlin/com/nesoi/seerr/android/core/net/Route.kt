@@ -1,6 +1,8 @@
 package com.nesoi.seerr.android.core.net
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -62,6 +64,18 @@ object Routes {
 
     fun removeWatchlist(tmdbId: Int, mediaType: String) =
         Route("DELETE", "/watchlist/$tmdbId", query = listOf("mediaType" to mediaType))
+
+    // Requests.
+    fun userQuota(userId: Int) = Route("GET", "/user/$userId/quota")
+
+    /** `seasons` is null for a movie. */
+    fun createRequest(mediaType: String, mediaId: Int, is4k: Boolean, seasons: List<Int>?) =
+        Route("POST", "/request", buildJsonObject {
+            put("mediaType", mediaType)
+            put("mediaId", mediaId)
+            put("is4k", is4k)
+            if (seasons != null) put("seasons", JsonArray(seasons.map { JsonPrimitive(it) }))
+        })
 
     private fun paged(path: String, page: Int) = Route("GET", path, query = listOf("page" to "$page"))
 }

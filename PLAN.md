@@ -68,8 +68,8 @@ One branch and one PR per phase, in the Android repo unless noted. Each PR has u
 | 0 ✅ | Project setup | Gradle project, `.gitignore`, app icon and colours from the iOS design, empty app that builds and runs, README |
 | 1 ✅ | Server and sign-in | Server address entry with the HTTPS rules, sign-in with Plex, local account and Jellyfin, session restore, sign-out, change server. Merged as #2. Sign-in, including Plex, was checked by the owner on an Android 17 emulator |
 | 2 🔍 | App shell and Discover | Five tabs (Discover, Movies, Series, Requests, Profile), Discover shelves, global search, media cards with status. Introduces `PagedLoader`, Coil, Navigation Compose and the unauthorized handler (a 401 returns the user to sign-in). Movies, Series and Requests are placeholders; Profile only has Sign out and Change server. **Merged.** Left for later: `PagedList` (phase 5, when Requests needs it) |
-| 3 🔍 | Details | Movie, series and collection pages, cast, trailer, recommendations and similar, watchlist button and shelf, tapping any card. **In review.** Left for later: Request and issue buttons (phases 4 and 7), season availability, Play links, a page for people |
-| 4 | Requesting | Request sheet: seasons, 4K, quota, advanced Radarr and Sonarr options, requesting for another user |
+| 3 🔍 | Details | Movie, series and collection pages, cast, trailer, recommendations and similar, watchlist button and shelf, tapping any card. **Merged.** Left for later: Request and issue buttons (phases 4 and 7), season availability, Play links, a page for people |
+| 4 🔍 | Requesting | Split in two. **Part 1 (in review):** Request button and sheet with seasons, 4K and quota, using the user's permissions and what is already requested or available. **Part 2:** advanced Radarr and Sonarr options and requesting for another user (admin only) |
 | 5 | Requests tab | Paged list, filter and sort, approve, decline, delete, review sheet |
 | 6 | Movies and Series | Browse grids, type-limited search, filters, saved filters, last-used filters |
 | 7 | Issues | Issues list in Profile, report an issue, issue page with comments and status |

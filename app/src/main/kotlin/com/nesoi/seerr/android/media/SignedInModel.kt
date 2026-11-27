@@ -1,6 +1,14 @@
 package com.nesoi.seerr.android.media
 
+import com.nesoi.seerr.android.core.PublicSettings
+import com.nesoi.seerr.android.core.User
 import com.nesoi.seerr.android.core.net.ApiClient
+import com.nesoi.seerr.android.core.net.Routes
+import com.nesoi.seerr.android.core.net.fetch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -9,9 +17,15 @@ import kotlinx.coroutines.launch
 class SignedInModel(
     private val scope: CoroutineScope,
     private val api: ApiClient,
-    /** Whether the user can add to and remove from the watchlist. */
-    val canEditWatchlist: Boolean = true,
+    val user: User,
 ) {
+    /** Whether the user can add to and remove from the watchlist. */
+    val canEditWatchlist: Boolean get() = user.canEditWatchlist
+
+    /** What the server allows everyone, such as 4K. Null until it has answered. */
+    private val _settings = MutableStateFlow<PublicSettings?>(null)
+    val settings: StateFlow<PublicSettings?> = _settings.asStateFlow()
+
     val watchlist = WatchlistStore(api)
     val discover = DiscoverModel(scope, api)
     val search = SearchModel(scope, api)
@@ -27,6 +41,15 @@ class SignedInModel(
     }
 
     init {
+        scope.launch {
+            try {
+                _settings.value = api.fetch<PublicSettings>(Routes.publicSettings)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Without it 4K just isn't offered, and a refresh of a page tries again.
+            }
+        }
         // A change on a detail page shows up on Discover and in the full list.
         scope.launch {
             watchlist.revision.drop(1).collect {
@@ -42,6 +65,9 @@ class SignedInModel(
     /** A movie or series page, kept so going back doesn't reload it. */
     fun title(type: TitleType, id: Int): TitleModel =
         titles.getOrPut("${type.path}-$id") { TitleModel(scope, api, type, id) }
+
+    /** The sheet for requesting a title. A new one each time, so it starts from the title's current state. */
+    fun requestModel(details: TitleDetails) = RequestModel(scope, api, user, details, settings.value)
 
     fun collection(id: Int): CollectionModel = collections.getOrPut(id) { CollectionModel(scope, api, id) }
 

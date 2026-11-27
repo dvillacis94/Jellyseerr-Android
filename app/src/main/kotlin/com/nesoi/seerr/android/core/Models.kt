@@ -16,6 +16,13 @@ data class PublicSettings(
     /** 1 Plex, 2 Jellyfin, 3 Emby, 4 not configured. */
     val mediaServerType: Int? = null,
     val plexClientIdentifier: String? = null,
+    /** Whether requests can be made in 4K at all, which needs a 4K server set up. */
+    val movie4kEnabled: Boolean = false,
+    val series4kEnabled: Boolean = false,
+    /** When off, a series can only be requested whole. */
+    val partialRequestsEnabled: Boolean = true,
+    /** Whether season 0 can be requested. */
+    val enableSpecialEpisodes: Boolean = false,
 )
 
 @Serializable
@@ -38,8 +45,24 @@ data class User(
      */
     val canEditWatchlist: Boolean get() = userType != PLEX_USER_TYPE
 
+    /** Like Seerr, an admin has every permission. Pass several to ask for any of them. */
+    fun has(vararg permission: Int): Boolean =
+        permissions and Permission.ADMIN != 0 || permission.any { permissions and it != 0 }
+
     val displayNameOrEmail: String
         get() = displayName ?: username ?: plexUsername ?: jellyfinUsername ?: email ?: "User $id"
 }
 
 private const val PLEX_USER_TYPE = 1
+
+/** The bits of a user's `permissions`, from Seerr's `server/lib/permissions.ts`. */
+object Permission {
+    const val ADMIN = 2
+    const val MANAGE_REQUESTS = 16
+    const val REQUEST = 32
+    const val REQUEST_4K = 1024
+    const val REQUEST_4K_MOVIE = 2048
+    const val REQUEST_4K_TV = 4096
+    const val REQUEST_MOVIE = 262144
+    const val REQUEST_TV = 524288
+}

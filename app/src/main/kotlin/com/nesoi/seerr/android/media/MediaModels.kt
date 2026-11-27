@@ -26,9 +26,36 @@ enum class MediaStatus(val code: Int) {
 data class MediaInfo(
     val id: Int? = null,
     val status: Int? = null,
+    val status4k: Int? = null,
+    /** Per season, for series. */
+    val seasons: List<SeasonInfo> = emptyList(),
+    /** Every request for the title, whoever made it. */
+    val requests: List<RequestInfo> = emptyList(),
 ) {
     val mediaStatus: MediaStatus get() = MediaStatus.from(status)
+    val mediaStatus4k: MediaStatus get() = MediaStatus.from(status4k)
 }
+
+@Serializable
+data class SeasonInfo(val seasonNumber: Int, val status: Int? = null, val status4k: Int? = null)
+
+/** A request on a title. `status` is Seerr's `MediaRequestStatus`: 1 pending, 2 approved, 3 declined, 4 failed, 5 completed. */
+@Serializable
+data class RequestInfo(
+    val id: Int,
+    val status: Int? = null,
+    val is4k: Boolean = false,
+    val seasons: List<RequestedSeason> = emptyList(),
+) {
+    val isDeclined: Boolean get() = status == REQUEST_DECLINED
+
+    private companion object {
+        const val REQUEST_DECLINED = 3
+    }
+}
+
+@Serializable
+data class RequestedSeason(val seasonNumber: Int, val status: Int? = null)
 
 /** One entry of `/search` and the `/discover` lists: a movie, a series, a person or a collection. */
 @Serializable(with = MediaItemSerializer::class)

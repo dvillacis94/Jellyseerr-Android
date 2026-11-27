@@ -77,6 +77,40 @@
     <string name="detail_watchlist_add">Add to watchlist</string>
     <string name="detail_watchlist_remove">Remove from watchlist</string>
     <string name="detail_watchlist_error">Couldn\'t update the watchlist.</string>
+    <string name="detail_request">Request</string>
+    <string name="request_standard">Standard</string>
+    <string name="request_4k">4K</string>
+    <string name="request_4k_only">Requesting in 4K</string>
+    <string name="request_seasons">Seasons</string>
+    <string name="request_season_n">Season %1$d</string>
+    <string name="request_select_all">Select all</string>
+    <string name="request_select_none">Clear</string>
+    <string name="request_already_requested">Requested</string>
+    <string name="request_send">Request</string>
+    <string name="request_pick_seasons">Pick at least one season.</string>
+    <string name="request_quota_used_up">You\'ve used up your request limit.</string>
+    <string name="request_too_many_seasons">Your limit leaves room for %1$d more seasons.</string>
+    <string name="request_sent">Requested</string>
+    <string name="request_sent_body">%1$s is waiting for approval.</string>
+    <string name="request_approved">Approved</string>
+    <string name="request_approved_body">%1$s was approved and will be added when it\'s ready.</string>
+    <plurals name="request_quota_days">
+        <item quantity="one">The limit covers %1$d day.</item>
+        <item quantity="other">The limit covers %1$d days.</item>
+    </plurals>
+    <string name="request_done">Done</string>
+    <plurals name="request_episodes">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="request_quota_movies">
+        <item quantity="one">%1$d of %2$d movie request left</item>
+        <item quantity="other">%1$d of %2$d movie requests left</item>
+    </plurals>
+    <plurals name="request_quota_seasons">
+        <item quantity="one">%1$d of %2$d season left</item>
+        <item quantity="other">%1$d of %2$d seasons left</item>
+    </plurals>
     <string name="detail_part_of">Part of %1$s</string>
     <string name="detail_a_collection">a collection</string>
     <string name="fact_status">Status</string>

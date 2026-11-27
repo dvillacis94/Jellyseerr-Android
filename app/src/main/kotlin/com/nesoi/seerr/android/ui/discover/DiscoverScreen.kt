@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nesoi.seerr.android.R
+import com.nesoi.seerr.android.media.MediaItem
 import com.nesoi.seerr.android.media.MediaList
 import com.nesoi.seerr.android.media.SignedInModel
 import com.nesoi.seerr.android.ui.media.ErrorMessage
@@ -44,7 +45,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiscoverScreen(model: SignedInModel, onSeeAll: (MediaList) -> Unit, modifier: Modifier = Modifier) {
+fun DiscoverScreen(model: SignedInModel, onSeeAll: (MediaList) -> Unit, onOpen: (MediaItem) -> Unit, modifier: Modifier = Modifier) {
     val discover = model.discover
     val search = model.search
     val query by search.query.collectAsStateWithLifecycle()
@@ -67,7 +68,7 @@ fun DiscoverScreen(model: SignedInModel, onSeeAll: (MediaList) -> Unit, modifier
 
         val loader = results
         when {
-            loader != null -> SearchResults(loader, search.trimmedQuery)
+            loader != null -> SearchResults(loader, search.trimmedQuery, onOpen)
             allFailed -> ErrorMessage(firstError, onRetry = discover::retry)
             else -> PullToRefreshBox(
                 isRefreshing = refreshing,
@@ -87,6 +88,7 @@ fun DiscoverScreen(model: SignedInModel, onSeeAll: (MediaList) -> Unit, modifier
                         MediaShelf(
                             title = stringResource(list.title),
                             loader = discover.shelves.getValue(list),
+                            onOpen = onOpen,
                             onSeeAll = { onSeeAll(list) },
                         )
                     }

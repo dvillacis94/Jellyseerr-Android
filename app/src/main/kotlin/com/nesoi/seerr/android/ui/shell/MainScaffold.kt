@@ -28,14 +28,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.navigation.navArgument
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.nesoi.seerr.android.R
 import com.nesoi.seerr.android.core.User
+import com.nesoi.seerr.android.media.MediaItem
 import com.nesoi.seerr.android.media.MediaList
+import com.nesoi.seerr.android.media.TitleType
+import com.nesoi.seerr.android.media.detailRoute
 import com.nesoi.seerr.android.media.SignedInModel
+import com.nesoi.seerr.android.ui.detail.CollectionScreen
+import com.nesoi.seerr.android.ui.detail.TitleScreen
 import com.nesoi.seerr.android.ui.discover.DiscoverScreen
 import com.nesoi.seerr.android.ui.media.MediaGridScreen
 
@@ -49,6 +56,12 @@ enum class AppTab(val route: String, val label: Int, val icon: ImageVector) {
 }
 
 private const val LIST_ROUTE = "list"
+private const val MOVIE_ROUTE = "movie"
+private const val TV_ROUTE = "tv"
+private const val COLLECTION_ROUTE = "collection"
+
+/** Pages pushed over a tab. They cover the tab bar, as on iOS. */
+private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE)
 
 @Composable
 fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChangeServer: () -> Unit) {
@@ -56,10 +69,12 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
     val backStack by navController.currentBackStackEntryAsState()
     val destination = backStack?.destination
 
+    val open: (MediaItem) -> Unit = { item -> item.detailRoute?.let { navController.navigate(it) } }
+    val back: () -> Unit = { navController.popBackStack() }
+
     Scaffold(
         bottomBar = {
-            // A pushed list covers the tab bar, as on iOS.
-            if (destination?.route?.startsWith(LIST_ROUTE) != true) {
+            if (pushedRoutes.none { destination?.route?.startsWith(it) == true }) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -82,7 +97,7 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
     ) { padding ->
         NavHost(navController, startDestination = AppTab.Discover.route, modifier = Modifier.padding(padding)) {
             composable(AppTab.Discover.route) {
-                DiscoverScreen(model, onSeeAll = { navController.navigate("$LIST_ROUTE/${it.name}") })
+                DiscoverScreen(model, onSeeAll = { navController.navigate("$LIST_ROUTE/${it.name}") }, onOpen = open)
             }
             composable(AppTab.Movies.route) { ComingSoon(R.string.tab_movies) }
             composable(AppTab.Series.route) { ComingSoon(R.string.tab_series) }
@@ -91,12 +106,29 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
             composable("$LIST_ROUTE/{list}") { entry ->
                 val list = entry.arguments?.getString("list")?.let { name -> MediaList.entries.firstOrNull { it.name == name } }
                 if (list != null) {
-                    MediaGridScreen(list, model.grid(list), onBack = { navController.popBackStack() })
+                    MediaGridScreen(list, model.grid(list), onBack = back, onOpen = open)
                 }
+            }
+            composable("$MOVIE_ROUTE/{id}", arguments = idArgument) { entry ->
+                entry.arguments?.getInt("id")?.let { id ->
+                    TitleScreen(model.title(TitleType.Movie, id), model.watchlist, model.canEditWatchlist, back, open) {
+                        navController.navigate("$COLLECTION_ROUTE/$it")
+                    }
+                }
+            }
+            composable("$TV_ROUTE/{id}", arguments = idArgument) { entry ->
+                entry.arguments?.getInt("id")?.let { id ->
+                    TitleScreen(model.title(TitleType.Series, id), model.watchlist, model.canEditWatchlist, back, open) {}
+                }
+            }
+            composable("$COLLECTION_ROUTE/{id}", arguments = idArgument) { entry ->
+                entry.arguments?.getInt("id")?.let { id -> CollectionScreen(model.collection(id), back, open) }
             }
         }
     }
 }
+
+private val idArgument = listOf(navArgument("id") { type = NavType.IntType })
 
 @Composable
 private fun ComingSoon(title: Int) {

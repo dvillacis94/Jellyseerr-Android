@@ -8,13 +8,15 @@ import com.nesoi.seerr.android.core.net.fetch
 
 /** A paged list of titles, shown as a shelf on Discover and as a full grid. */
 enum class MediaList(val title: Int) {
+    Watchlist(R.string.list_watchlist),
     Trending(R.string.list_trending),
     PopularMovies(R.string.list_popular_movies),
     UpcomingMovies(R.string.list_upcoming_movies),
     PopularSeries(R.string.list_popular_series),
     UpcomingSeries(R.string.list_upcoming_series);
 
-    fun route(page: Int): Route = when (this) {
+    private fun route(page: Int): Route = when (this) {
+        Watchlist -> error("The watchlist has its own loader")
         Trending -> Routes.discoverTrending(page)
         PopularMovies -> Routes.discoverMovies(page)
         UpcomingMovies -> Routes.discoverMoviesUpcoming(page)
@@ -22,5 +24,8 @@ enum class MediaList(val title: Int) {
         UpcomingSeries -> Routes.discoverTvUpcoming(page)
     }
 
-    fun loader(api: ApiClient) = PagedLoader { page -> api.fetch<MediaPage>(route(page)) }
+    fun loader(api: ApiClient) = when (this) {
+        Watchlist -> PagedLoader { page -> api.watchlistPage(page) }
+        else -> PagedLoader { page -> api.fetch<MediaPage>(route(page)) }
+    }
 }

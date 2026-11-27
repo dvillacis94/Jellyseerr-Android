@@ -122,5 +122,5 @@ class AppViewModel(
         _state.value = AppState.Login(model)
     }
 
-    private fun signedIn(user: User, server: HttpUrl) = AppState.SignedIn(user, server, SignedInModel(viewModelScope, api))
+    private fun signedIn(user: User, server: HttpUrl) = AppState.SignedIn(user, server, SignedInModel(viewModelScope, api, user.canEditWatchlist))
 }

@@ -3,6 +3,7 @@ package com.nesoi.seerr.android.ui.media
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,8 +68,10 @@ fun PosterImage(url: String?, modifier: Modifier = Modifier, placeholder: ImageV
 
 /** A title's poster, kind and library status, with its name and year underneath. */
 @Composable
-fun MediaCard(item: MediaItem, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+fun MediaCard(item: MediaItem, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    Column(
+        modifier.clip(RoundedCornerShape(8.dp)).let { if (onClick != null) it.clickable(onClick = onClick) else it },
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box {
             PosterImage(
                 url = TmdbImage.poster(item.posterPath),

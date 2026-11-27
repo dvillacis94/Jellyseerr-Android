@@ -1,5 +1,6 @@
 package com.nesoi.seerr.android.ui.media
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nesoi.seerr.android.R
 import com.nesoi.seerr.android.media.MediaItem
 import com.nesoi.seerr.android.media.MediaList
+import com.nesoi.seerr.android.media.detailRoute
 import com.nesoi.seerr.android.media.PagedLoader
 import com.nesoi.seerr.android.media.TmdbImage
 import kotlinx.coroutines.launch
@@ -54,8 +56,10 @@ private val CardWidth = 116.dp
 fun MediaShelf(
     title: String,
     loader: PagedLoader,
-    onSeeAll: () -> Unit,
+    onOpen: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
+    /** Without one, the shelf has no "See all", such as on a title's related shelves. */
+    onSeeAll: (() -> Unit)? = null,
 ) {
     val state by loader.state.collectAsStateWithLifecycle()
     // A shelf that came back empty, such as no upcoming titles, is left out.
@@ -63,7 +67,7 @@ fun MediaShelf(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            if (state.items.isNotEmpty()) {
+            if (state.items.isNotEmpty() && onSeeAll != null) {
                 TextButton(onClick = onSeeAll) { Text(stringResource(R.string.shelf_see_all)) }
             }
         }
@@ -72,7 +76,7 @@ fun MediaShelf(
                 items(6) { PosterImage(url = null, modifier = Modifier.width(CardWidth)) }
             } else {
                 items(state.items, key = { it.key }) { item ->
-                    MediaCard(item, Modifier.width(CardWidth))
+                    MediaCard(item, Modifier.width(CardWidth), onClick = item.detailRoute?.let { { onOpen(item) } })
                 }
             }
         }
@@ -82,7 +86,7 @@ fun MediaShelf(
 /** A full list as a grid that keeps loading as the user scrolls. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit) {
+fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit, onOpen: (MediaItem) -> Unit) {
     val state by loader.state.collectAsStateWithLifecycle()
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
@@ -118,7 +122,7 @@ fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(state.items, key = { it.key }) { MediaCard(it) }
+                    items(state.items, key = { it.key }) { item -> MediaCard(item, onClick = item.detailRoute?.let { { onOpen(item) } }) }
                 }
             }
         }
@@ -127,7 +131,7 @@ fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit) {
 
 /** Search results for the search bar's text, shown in place of the screen's own content. */
 @Composable
-fun SearchResults(loader: PagedLoader, query: String, modifier: Modifier = Modifier) {
+fun SearchResults(loader: PagedLoader, query: String, onOpen: (MediaItem) -> Unit, modifier: Modifier = Modifier) {
     val state by loader.state.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -145,7 +149,7 @@ fun SearchResults(loader: PagedLoader, query: String, modifier: Modifier = Modif
                 textAlign = TextAlign.Center,
             )
             else -> LazyColumn(state = list, contentPadding = PaddingValues(vertical = 8.dp)) {
-                items(state.items, key = { it.key }) { SearchResultRow(it) }
+                items(state.items, key = { it.key }) { item -> SearchResultRow(item, onClick = { onOpen(item) }) }
                 if (state.isLoading) {
                     item { Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
                 }
@@ -155,8 +159,13 @@ fun SearchResults(loader: PagedLoader, query: String, modifier: Modifier = Modif
 }
 
 @Composable
-private fun SearchResultRow(item: MediaItem) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun SearchResultRow(item: MediaItem, onClick: () -> Unit) {
+    // People have no page yet, so their rows aren't tappable.
+    val tappable = item.detailRoute != null
+    Row(
+        Modifier.fillMaxWidth().let { if (tappable) it.clickable(onClick = onClick) else it }
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PosterImage(TmdbImage.poster(item.posterPath), Modifier.width(52.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(item.title ?: stringResource(R.string.list_untitled), style = MaterialTheme.typography.bodyLarge, maxLines = 2)

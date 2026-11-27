@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 /** The Discover shelves. Each one loads, and fails, on its own. */
 class DiscoverModel(private val scope: CoroutineScope, api: ApiClient) {
     val lists: List<MediaList> = listOf(
+        MediaList.Watchlist,
         MediaList.Trending,
         MediaList.PopularMovies,
         MediaList.UpcomingMovies,

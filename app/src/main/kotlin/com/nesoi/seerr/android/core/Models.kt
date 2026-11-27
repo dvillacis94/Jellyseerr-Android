@@ -27,9 +27,19 @@ data class User(
     val displayName: String? = null,
     val avatar: String? = null,
     val permissions: Int = 0,
+    /** 1 Plex, 2 local, 3 Jellyfin, 4 Emby, as in Seerr's `UserType`. */
+    val userType: Int? = null,
     val plexUsername: String? = null,
     val jellyfinUsername: String? = null,
 ) {
+    /**
+     * Plex users' watchlist lives in Plex, and Seerr lists that one instead, so like the web app
+     * only offer adding and removing to everyone else.
+     */
+    val canEditWatchlist: Boolean get() = userType != PLEX_USER_TYPE
+
     val displayNameOrEmail: String
         get() = displayName ?: username ?: plexUsername ?: jellyfinUsername ?: email ?: "User $id"
 }
+
+private const val PLEX_USER_TYPE = 1

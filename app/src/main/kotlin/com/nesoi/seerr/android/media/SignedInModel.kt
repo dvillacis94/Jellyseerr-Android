@@ -8,6 +8,7 @@ import com.nesoi.seerr.android.core.net.fetch
 import com.nesoi.seerr.android.issues.IssueDetailModel
 import com.nesoi.seerr.android.issues.Issue
 import com.nesoi.seerr.android.issues.IssuesModel
+import com.nesoi.seerr.android.issues.ReportIssueModel
 import com.nesoi.seerr.android.notifications.NotificationSettingsModel
 import com.nesoi.seerr.android.requests.RequestsModel
 import kotlinx.coroutines.CancellationException
@@ -85,6 +86,9 @@ class SignedInModel(
 
     /** An issue's page. A new one each time, so it starts from what the server says now; the list reloads after changes. */
     fun issueDetail(id: Int, initial: Issue? = null) = IssueDetailModel(scope, api, id, issues.rules, initial, onChanged = issues::reload)
+
+    /** The sheet for reporting a problem with a title. A new one each time. */
+    fun reportIssueModel(details: TitleDetails) = ReportIssueModel(scope, api, details, onReported = issues::reload)
 
     fun collection(id: Int): CollectionModel = collections.getOrPut(id) { CollectionModel(scope, api, id) }
 

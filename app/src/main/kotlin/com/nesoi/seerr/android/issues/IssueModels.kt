@@ -3,6 +3,8 @@ package com.nesoi.seerr.android.issues
 import com.nesoi.seerr.android.R
 import com.nesoi.seerr.android.core.Permission
 import com.nesoi.seerr.android.core.User
+import com.nesoi.seerr.android.media.MediaInfo
+import com.nesoi.seerr.android.media.MediaStatus
 import com.nesoi.seerr.android.media.TitleType
 import com.nesoi.seerr.android.requests.RequestUser
 import kotlinx.serialization.Serializable
@@ -126,6 +128,9 @@ class IssueRules(private val user: User) {
 
     fun isOwn(issue: Issue) = issue.createdBy?.id == user.id
 
+    /** Whether this person may open the issue: anyone's with view or manage, else only their own. */
+    fun canView(issue: Issue) = canViewOthers || (canViewIssues && isOwn(issue))
+
     /** Commenting, resolving and reopening: managers, or the reporter. */
     fun canModify(issue: Issue) = canManage || (canReport && isOwn(issue))
 
@@ -149,3 +154,15 @@ fun formatDateTime(iso: String?, locale: Locale = Locale.getDefault(), zone: Zon
     iso?.let(::parseInstant)?.let {
         DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(locale).withZone(zone).format(it)
     }
+
+/** The title's open issues this person can open, newest first. */
+fun MediaInfo?.openIssues(rules: IssueRules): List<Issue> =
+    this?.issues.orEmpty()
+        .filter { it.issueStatus == IssueStatus.Open && rules.canView(it) }
+        .sortedByDescending { it.createdAt ?: "" }
+
+/** Issues can only be reported on titles Seerr has in the library. */
+fun MediaInfo?.canReportIssue(): Boolean =
+    this != null && id != null && (mediaStatus.isInLibrary || mediaStatus4k.isInLibrary)
+
+private val MediaStatus.isInLibrary: Boolean get() = this == MediaStatus.Available || this == MediaStatus.PartiallyAvailable

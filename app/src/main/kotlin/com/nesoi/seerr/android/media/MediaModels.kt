@@ -1,5 +1,6 @@
 package com.nesoi.seerr.android.media
 
+import com.nesoi.seerr.android.issues.Issue
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -31,6 +32,8 @@ data class MediaInfo(
     val seasons: List<SeasonInfo> = emptyList(),
     /** Every request for the title, whoever made it. */
     val requests: List<RequestInfo> = emptyList(),
+    /** Every issue reported on the title, whoever reported it. */
+    val issues: List<Issue> = emptyList(),
 ) {
     val mediaStatus: MediaStatus get() = MediaStatus.from(status)
     val mediaStatus4k: MediaStatus get() = MediaStatus.from(status4k)

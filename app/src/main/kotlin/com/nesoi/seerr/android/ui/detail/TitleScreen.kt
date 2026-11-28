@@ -66,7 +66,10 @@ import com.nesoi.seerr.android.media.canBeRequestedBy
 import com.nesoi.seerr.android.media.CastMember
 import com.nesoi.seerr.android.media.DetailState
 import com.nesoi.seerr.android.media.MediaFormat
+import com.nesoi.seerr.android.issues.IssuesModel
+import com.nesoi.seerr.android.issues.ReportIssueModel
 import com.nesoi.seerr.android.media.MediaItem
+import com.nesoi.seerr.android.ui.issues.TitleIssuesSection
 import com.nesoi.seerr.android.media.MediaStatus
 import com.nesoi.seerr.android.media.MovieDetails
 import com.nesoi.seerr.android.media.TitleDetails
@@ -94,11 +97,17 @@ fun TitleScreen(
     user: User,
     settings: PublicSettings?,
     newRequest: (TitleDetails) -> RequestModel,
+    issues: IssuesModel,
+    newReport: (TitleDetails) -> ReportIssueModel,
     onBack: () -> Unit,
     onOpen: (MediaItem) -> Unit,
     onOpenCollection: (Int) -> Unit,
+    onOpenIssue: (Int) -> Unit,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
+    // An issue reported or changed elsewhere changes what this page shows.
+    val revision by issues.revision.collectAsStateWithLifecycle()
+    LaunchedEffect(revision) { model.syncIssues(revision) }
     val scope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
     LaunchedEffect(model) { model.load() }
@@ -117,7 +126,7 @@ fun TitleScreen(
                 },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                TitleContent(current.value, model, user, settings, newRequest, onOpen, onOpenCollection)
+                TitleContent(current.value, model, user, settings, newRequest, issues, newReport, onOpen, onOpenCollection, onOpenIssue)
             }
         }
         // The back button stays put, whatever the page is doing.
@@ -195,8 +204,11 @@ private fun TitleContent(
     user: User,
     settings: PublicSettings?,
     newRequest: (TitleDetails) -> RequestModel,
+    issues: IssuesModel,
+    newReport: (TitleDetails) -> ReportIssueModel,
     onOpen: (MediaItem) -> Unit,
     onOpenCollection: (Int) -> Unit,
+    onOpenIssue: (Int) -> Unit,
 ) {
     val uri = LocalUriHandler.current
     val scope = rememberCoroutineScope()
@@ -227,6 +239,7 @@ private fun TitleContent(
                 }
             }
             Facts(facts(details))
+            TitleIssuesSection(details, issues.rules, newReport, onOpenIssue)
         }
 
         CastShelf(details.credits?.cast.orEmpty())

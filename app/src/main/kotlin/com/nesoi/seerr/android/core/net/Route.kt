@@ -86,6 +86,16 @@ object Routes {
 
     fun issue(id: Int) = Route("GET", "/issue/$id")
 
+    /** [mediaId] is Seerr's own id for the title (`mediaInfo.id`), not the TMDB id. */
+    fun createIssue(issueType: Int, message: String, mediaId: Int, problemSeason: Int?, problemEpisode: Int?) =
+        Route("POST", "/issue", buildJsonObject {
+            put("issueType", issueType)
+            put("message", message)
+            put("mediaId", mediaId)
+            if (problemSeason != null) put("problemSeason", problemSeason)
+            if (problemEpisode != null) put("problemEpisode", problemEpisode)
+        })
+
     /** `status` is `open` or `resolved`. */
     fun setIssueStatus(id: Int, status: String) = Route("POST", "/issue/$id/$status", requiresSession = false)
     fun deleteIssue(id: Int) = Route("DELETE", "/issue/$id", requiresSession = false)

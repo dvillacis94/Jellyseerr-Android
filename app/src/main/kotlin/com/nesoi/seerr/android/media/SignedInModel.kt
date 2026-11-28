@@ -5,6 +5,9 @@ import com.nesoi.seerr.android.core.User
 import com.nesoi.seerr.android.core.net.ApiClient
 import com.nesoi.seerr.android.core.net.Routes
 import com.nesoi.seerr.android.core.net.fetch
+import com.nesoi.seerr.android.issues.IssueDetailModel
+import com.nesoi.seerr.android.issues.Issue
+import com.nesoi.seerr.android.issues.IssuesModel
 import com.nesoi.seerr.android.notifications.NotificationSettingsModel
 import com.nesoi.seerr.android.requests.RequestsModel
 import kotlinx.coroutines.CancellationException
@@ -36,6 +39,7 @@ class SignedInModel(
     val search = SearchModel(scope, api)
     val requests = RequestsModel(scope, api, user)
     val notifications = NotificationSettingsModel(api, user) { settings.value }
+    val issues = IssuesModel(api, user)
     private val region: () -> String? = { _settings.value?.streamingRegion?.takeIf { it.isNotEmpty() } ?: _settings.value?.discoverRegion?.takeIf { it.isNotEmpty() } }
     val movies = BrowseModel(scope, api, TitleType.Movie, filterStorage, "filters.$storageScope.${TitleType.Movie.path}", region)
     val series = BrowseModel(scope, api, TitleType.Series, filterStorage, "filters.$storageScope.${TitleType.Series.path}", region)
@@ -78,6 +82,9 @@ class SignedInModel(
 
     /** The sheet for requesting a title. A new one each time, so it starts from the title's current state. */
     fun requestModel(details: TitleDetails) = RequestModel(scope, api, user, details, settings.value)
+
+    /** An issue's page. A new one each time, so it starts from what the server says now; the list reloads after changes. */
+    fun issueDetail(id: Int, initial: Issue? = null) = IssueDetailModel(scope, api, id, issues.rules, initial, onChanged = issues::reload)
 
     fun collection(id: Int): CollectionModel = collections.getOrPut(id) { CollectionModel(scope, api, id) }
 

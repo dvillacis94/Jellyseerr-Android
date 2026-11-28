@@ -347,4 +347,23 @@
     <string name="issue_reported">Reported</string>
     <string name="issue_you">You</string>
     <string name="issue_unknown_user">Unknown user</string>
+
+    <!-- Reporting an issue -->
+    <string name="report_button">Report an issue</string>
+    <string name="report_title">Report an issue</string>
+    <string name="report_whats_wrong">What\'s wrong?</string>
+    <string name="report_season">Season</string>
+    <string name="report_episode">Episode</string>
+    <string name="report_all_seasons">All seasons</string>
+    <string name="report_all_episodes">All episodes</string>
+    <string name="report_details">Details</string>
+    <string name="report_hint">Describe the problem</string>
+    <string name="report_footer">People who manage issues on this server can see it and reply.</string>
+    <string name="report_submit">Submit</string>
+    <string name="title_issue_type">%1$s issue</string>
+    <string name="title_issue_by_you">Reported by you</string>
+    <plurals name="title_open_issues">
+        <item quantity="one">%1$d open issue</item>
+        <item quantity="other">%1$d open issues</item>
+    </plurals>
 </resources>

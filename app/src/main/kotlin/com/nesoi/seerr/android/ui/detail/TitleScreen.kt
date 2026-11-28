@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -66,7 +67,10 @@ import com.nesoi.seerr.android.media.canBeRequestedBy
 import com.nesoi.seerr.android.media.CastMember
 import com.nesoi.seerr.android.media.DetailState
 import com.nesoi.seerr.android.media.MediaFormat
+import com.nesoi.seerr.android.issues.IssuesModel
+import com.nesoi.seerr.android.issues.ReportIssueModel
 import com.nesoi.seerr.android.media.MediaItem
+import com.nesoi.seerr.android.ui.issues.TitleIssuesSection
 import com.nesoi.seerr.android.media.MediaStatus
 import com.nesoi.seerr.android.media.MovieDetails
 import com.nesoi.seerr.android.media.TitleDetails
@@ -94,11 +98,17 @@ fun TitleScreen(
     user: User,
     settings: PublicSettings?,
     newRequest: (TitleDetails) -> RequestModel,
+    issues: IssuesModel,
+    newReport: (TitleDetails) -> ReportIssueModel,
     onBack: () -> Unit,
     onOpen: (MediaItem) -> Unit,
     onOpenCollection: (Int) -> Unit,
+    onOpenIssue: (Int) -> Unit,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
+    // An issue reported or changed elsewhere changes what this page shows.
+    val revision by issues.revision.collectAsStateWithLifecycle()
+    LaunchedEffect(revision) { model.syncIssues(revision) }
     val scope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
     LaunchedEffect(model) { model.load() }
@@ -117,7 +127,7 @@ fun TitleScreen(
                 },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                TitleContent(current.value, model, user, settings, newRequest, onOpen, onOpenCollection)
+                TitleContent(current.value, model, user, settings, newRequest, issues, newReport, onOpen, onOpenCollection, onOpenIssue)
             }
         }
         // The back button stays put, whatever the page is doing.
@@ -195,8 +205,11 @@ private fun TitleContent(
     user: User,
     settings: PublicSettings?,
     newRequest: (TitleDetails) -> RequestModel,
+    issues: IssuesModel,
+    newReport: (TitleDetails) -> ReportIssueModel,
     onOpen: (MediaItem) -> Unit,
     onOpenCollection: (Int) -> Unit,
+    onOpenIssue: (Int) -> Unit,
 ) {
     val uri = LocalUriHandler.current
     val scope = rememberCoroutineScope()
@@ -211,11 +224,10 @@ private fun TitleContent(
                 }
             }
             details.trailerUrl()?.let { url ->
-                OutlinedButton(onClick = { uri.openUri(url) }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                    Text(stringResource(R.string.detail_trailer), Modifier.padding(start = 8.dp))
-                }
+                TitleActionButton(Icons.Filled.PlayArrow, stringResource(R.string.detail_trailer), onClick = { uri.openUri(url) })
             }
+            // Right under the trailer, as on iOS, with the title's open issues below it.
+            TitleIssuesSection(details, issues.rules, newReport, onOpenIssue)
             Overview(details.tagline, details.overview)
             (details as? MovieDetails)?.collection?.let { collection ->
                 OutlinedButton(onClick = { onOpenCollection(collection.id) }, modifier = Modifier.fillMaxWidth()) {
@@ -303,7 +315,8 @@ private fun headline(details: TitleDetails): String? =
 private fun Overview(tagline: String?, overview: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         tagline?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // The tagline reads as a quote, apart from the overview.
+            Text(it, style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         overview?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     }

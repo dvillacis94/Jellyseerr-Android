@@ -44,6 +44,19 @@ class TitleModel(
         load()
     }
 
+    /** The issue changes this page has already caught up with. Null until the page first asks. */
+    private var issuesRevision: Int? = null
+
+    /**
+     * Fetches the page again if issues were reported or changed since it last looked. This lives
+     * here, not in the screen, because the screen forgets what it saw while another page covers it.
+     */
+    suspend fun syncIssues(revision: Int) {
+        val seen = issuesRevision
+        issuesRevision = revision
+        if (seen != null && seen != revision) refresh()
+    }
+
     /** Pull to refresh. What is on screen stays until the new details arrive. */
     suspend fun refresh() {
         coroutineScope {

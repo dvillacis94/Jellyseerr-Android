@@ -110,4 +110,30 @@ class TitleModelTest {
         assertEquals(listOf("One", "Two"), (model.state.value as DetailState.Loaded).value.parts.map { it.title })
         assertEquals("/api/v1/collection/5", server.takeRequest().url.encodedPath)
     }
+
+    @Test fun `the page fetches again only when issues changed since it last looked`() = runBlocking {
+        var detailRequests = 0
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.url.encodedPath.endsWith("/recommendations") || request.url.encodedPath.endsWith("/similar") -> json(list)
+                else -> { detailRequests++; json("""{"id":603,"title":"The Matrix"}""") }
+            }
+        }
+        val model = TitleModel(this, fixture.api, TitleType.Movie, 603)
+        model.load()
+        model.awaitDone()
+        assertEquals(1, detailRequests)
+
+        // The first look only notes where things stand.
+        model.syncIssues(0)
+        assertEquals(1, detailRequests)
+        // Looking again with nothing changed does nothing, even from a fresh screen.
+        model.syncIssues(0)
+        assertEquals(1, detailRequests)
+        // An issue was reported or changed while the page was covered.
+        model.syncIssues(1)
+        assertEquals(2, detailRequests)
+        model.syncIssues(1)
+        assertEquals(2, detailRequests)
+    }
 }

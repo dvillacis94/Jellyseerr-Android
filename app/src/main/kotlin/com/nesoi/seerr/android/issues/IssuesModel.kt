@@ -49,8 +49,13 @@ class IssuesModel(private val api: ApiClient, user: User) {
         _list.value = newList()
     }
 
-    /** After a change made on an issue's page, so the list shows what the server now says. */
+    /** Counts the changes made to issues, so a title's page knows to fetch its own issues again. */
+    private val _revision = MutableStateFlow(0)
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    /** After an issue is reported or changed, so the list and any title page show what the server now says. */
     suspend fun reload() {
+        _revision.value++
         _list.value.reload()
     }
 

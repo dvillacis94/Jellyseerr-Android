@@ -146,14 +146,22 @@ fun MainScaffold(
             }
             composable("$MOVIE_ROUTE/{id}", arguments = idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->
-                    TitleScreen(model.title(TitleType.Movie, id), model.watchlist, model.canEditWatchlist, user, settings, model::requestModel, back, open) {
-                        navController.navigate("$COLLECTION_ROUTE/$it")
-                    }
+                    TitleScreen(
+                        model.title(TitleType.Movie, id), model.watchlist, model.canEditWatchlist, user, settings,
+                        model::requestModel, model.issues, model::reportIssueModel, back, open,
+                        onOpenCollection = { navController.navigate("$COLLECTION_ROUTE/$it") },
+                        onOpenIssue = { navController.navigate("$ISSUES_ROUTE/$it") },
+                    )
                 }
             }
             composable("$TV_ROUTE/{id}", arguments = idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->
-                    TitleScreen(model.title(TitleType.Series, id), model.watchlist, model.canEditWatchlist, user, settings, model::requestModel, back, open) {}
+                    TitleScreen(
+                        model.title(TitleType.Series, id), model.watchlist, model.canEditWatchlist, user, settings,
+                        model::requestModel, model.issues, model::reportIssueModel, back, open,
+                        onOpenCollection = {},
+                        onOpenIssue = { navController.navigate("$ISSUES_ROUTE/$it") },
+                    )
                 }
             }
             composable("$COLLECTION_ROUTE/{id}", arguments = idArgument) { entry ->

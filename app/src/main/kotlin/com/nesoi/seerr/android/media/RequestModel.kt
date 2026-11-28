@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 /** One kind of request quota, from `GET /user/{id}/quota`. A limit of 0 means none. */
 @Serializable
@@ -107,7 +110,12 @@ sealed interface RequestOutcome {
 data class RequestDraft(
     val is4k: Boolean = false,
     val seasons: Set<Int> = emptySet(),
+    /** The quota of whoever the request is for. */
     val quota: Quota? = null,
+    /** Who the request is for: the signed-in user unless an admin chose someone else. Zero until known. */
+    val requestUserId: Int = 0,
+    /** Don't count the request against the quota. Only managers can. */
+    val ignoreQuota: Boolean = false,
 )
 
 /** The state behind the request sheet for one title. */
@@ -120,6 +128,62 @@ class RequestModel(
 ) {
     private val _draft = MutableStateFlow(initialDraft())
     val draft: StateFlow<RequestDraft> = _draft.asStateFlow()
+
+    /** "Request as" another user needs both permissions, as on the server. */
+    val canRequestOnBehalf: Boolean get() = user.hasAll(Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS)
+
+    private val _users = MutableStateFlow<List<User>>(emptyList())
+
+    /** Everyone, once loaded, for choosing who the request is for. */
+    val users: StateFlow<List<User>> = _users.asStateFlow()
+
+    /** The destination choices, for people allowed to make them. Rebuilt when the resolution changes. */
+    private val _advanced = MutableStateFlow(makeAdvanced(initialDraft().is4k))
+    val advanced: StateFlow<AdvancedRequestOptions?> = _advanced.asStateFlow()
+
+    private fun makeAdvanced(is4k: Boolean): AdvancedRequestOptions? {
+        if (!user.has(Permission.REQUEST_ADVANCED, Permission.MANAGE_REQUESTS)) return null
+        val kind = if (details.type == TitleType.Movie) "radarr" else "sonarr"
+        return AdvancedRequestOptions(scope, api, kind, is4k, isAnime = (details as? TvDetails)?.isAnime == true)
+    }
+
+    /** The people the request could be for at this resolution, as the server checks on create. */
+    fun eligibleUsers(draft: RequestDraft): List<User> = _users.value.filter { it.canRequest(details.type, draft.is4k) }
+
+    fun canChooseUser(draft: RequestDraft): Boolean = eligibleUsers(draft).size > 1
+
+    fun isForSomeoneElse(draft: RequestDraft): Boolean = draft.requestUserId != user.id
+
+    /** The requester's name, when it isn't the signed-in user. */
+    fun requestUserName(draft: RequestDraft): String? =
+        if (isForSomeoneElse(draft)) _users.value.firstOrNull { it.id == draft.requestUserId }?.displayNameOrEmail else null
+
+    fun loadUsers() {
+        if (!canRequestOnBehalf || _users.value.isNotEmpty()) return
+        scope.launch {
+            try {
+                _users.value = api.fetch<UserPage>(Routes.usersForRequest()).results
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Without the list the choice just stays hidden.
+            }
+        }
+    }
+
+    fun setRequestUser(id: Int) {
+        if (id == _draft.value.requestUserId || !canRequestOnBehalf) return
+        // Their quota is not the signed-in user's, so it loads again and any bypass starts off.
+        _draft.update { it.copy(requestUserId = id, quota = null, ignoreQuota = false) }
+        loadQuota()
+    }
+
+    fun setIgnoreQuota(ignore: Boolean) = _draft.update { it.copy(ignoreQuota = ignore && canBypassQuota(it)) }
+
+    /** Managers may let a request skip a limited quota. */
+    fun canBypassQuota(draft: RequestDraft): Boolean = user.has(Permission.MANAGE_REQUESTS) && quotaFor(draft) != null
+
+    private fun bypassesQuota(draft: RequestDraft) = draft.ignoreQuota && canBypassQuota(draft)
 
     private val _outcome = MutableStateFlow<RequestOutcome>(RequestOutcome.Idle)
     val outcome: StateFlow<RequestOutcome> = _outcome.asStateFlow()
@@ -139,7 +203,7 @@ class RequestModel(
     private fun initialDraft(): RequestDraft {
         // Start on 4K only when standard is no longer open.
         val is4k = !offersStandard && offers4k
-        return RequestDraft(is4k = is4k, seasons = defaultSeasons(is4k))
+        return RequestDraft(is4k = is4k, seasons = defaultSeasons(is4k), requestUserId = user.id)
     }
 
     /** With partial requests off, a series is asked for whole: everything still open. */
@@ -153,10 +217,12 @@ class RequestModel(
 
     /** Looks up the user's quota. A failure is fine, since the server enforces it anyway. */
     fun loadQuota() {
+        val id = _draft.value.requestUserId
         scope.launch {
             try {
-                val quota = api.fetch<Quota>(Routes.userQuota(user.id))
-                _draft.update { it.copy(quota = quota) }
+                val quota = api.fetch<Quota>(Routes.userQuota(id))
+                // A reply for someone no longer chosen is ignored.
+                _draft.update { if (it.requestUserId == id) it.copy(quota = quota) else it }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
@@ -167,6 +233,10 @@ class RequestModel(
     fun set4k(is4k: Boolean) {
         if (is4k && !offers4k || !is4k && !offersStandard) return
         _draft.update { it.copy(is4k = is4k, seasons = defaultSeasons(is4k)) }
+        _advanced.value = makeAdvanced(is4k)
+        // The chosen person may not be allowed this resolution.
+        val draft = _draft.value
+        if (isForSomeoneElse(draft) && _users.value.isNotEmpty() && eligibleUsers(draft).none { it.id == draft.requestUserId }) setRequestUser(user.id)
     }
 
     fun toggle(seasonNumber: Int) {
@@ -189,12 +259,13 @@ class RequestModel(
     }
 
     /** The quota that applies to this kind of title, if it limits anything. */
-    private fun quotaFor(draft: RequestDraft): QuotaStatus? =
+    fun quotaFor(draft: RequestDraft): QuotaStatus? =
         (if (details.type == TitleType.Movie) draft.quota?.movie else draft.quota?.tv)?.takeIf { it.hasLimit }
 
     /** Why the user can't send this request, or null when they can. */
     fun blocker(draft: RequestDraft): Blocker? {
-        val quota = quotaFor(draft)
+        // A manager can let the request skip the quota.
+        val quota = quotaFor(draft)?.takeIf { !bypassesQuota(draft) }
         if (quota?.restricted == true) return Blocker.QuotaUsedUp
         if (details is TvDetails && draft.seasons.isEmpty() && seasonChoices(draft.is4k).isNotEmpty()) return Blocker.NoSeasons
         val remaining = quota?.remaining
@@ -215,7 +286,7 @@ class RequestModel(
         scope.launch {
             try {
                 val seasons = if (details is TvDetails) draft.seasons.sorted() else null
-                val route = Routes.createRequest(details.type.path, details.id, draft.is4k, seasons)
+                val route = Routes.createRequest(details.type.path, details.id, draft.is4k, seasons, extras(draft))
                 val created = api.fetch<CreatedRequest>(route)
                 _outcome.value = RequestOutcome.Sent(approved = created.status == REQUEST_APPROVED)
             } catch (error: CancellationException) {
@@ -226,12 +297,28 @@ class RequestModel(
         }
     }
 
+    /** What only some people may set: where it goes, who it is for, and skipping the quota. */
+    private fun extras(draft: RequestDraft): Map<String, JsonElement> = buildMap {
+        _advanced.value?.state?.value?.destination?.let { d ->
+            d.serverId?.let { put("serverId", JsonPrimitive(it)) }
+            d.profileId?.let { put("profileId", JsonPrimitive(it)) }
+            d.rootFolder?.let { put("rootFolder", JsonPrimitive(it)) }
+            d.languageProfileId?.let { put("languageProfileId", JsonPrimitive(it)) }
+            d.tags?.let { tags -> put("tags", JsonArray(tags.map { JsonPrimitive(it) })) }
+        }
+        if (isForSomeoneElse(draft)) put("userId", JsonPrimitive(draft.requestUserId))
+        if (bypassesQuota(draft)) put("ignoreQuota", JsonPrimitive(true))
+    }
+
     fun dismissError() {
         if (_outcome.value is RequestOutcome.Failed) _outcome.value = RequestOutcome.Idle
     }
 
     @Serializable
     private data class CreatedRequest(val status: Int? = null)
+
+    @Serializable
+    private data class UserPage(val results: List<User> = emptyList())
 
     private companion object {
         const val REQUEST_APPROVED = 2

@@ -266,7 +266,7 @@ private fun SectionTitle(text: String) {
 
 /** A label with its current value on the right. Tapping it opens something. */
 @Composable
-private fun ValueRow(title: String, value: String, onClick: () -> Unit, chevron: Boolean = false) {
+internal fun ValueRow(title: String, value: String, onClick: () -> Unit, chevron: Boolean = false) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         Box(Modifier.weight(1f))
@@ -286,7 +286,7 @@ private fun ValueRow(title: String, value: String, onClick: () -> Unit, chevron:
 
 /** A row that drops a short list of choices down from its value. */
 @Composable
-private fun <T> DropdownRow(title: String, value: String, options: List<Pair<T, String>>, onPick: (T) -> Unit) {
+internal fun <T> DropdownRow(title: String, value: String, options: List<Pair<T, String>>, onPick: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         ValueRow(title, value, onClick = { open = true })
@@ -387,7 +387,7 @@ private fun PickRow(text: String, selected: Boolean, onClick: () -> Unit) {
 
 /** A searchable popup of (code, name), for the streaming region. [onPick] gets null for "Any". */
 @Composable
-private fun SearchPickerDialog(
+internal fun SearchPickerDialog(
     title: String,
     options: List<Pair<String, String>>,
     selected: String?,

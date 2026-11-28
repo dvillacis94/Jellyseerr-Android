@@ -1,6 +1,7 @@
 package com.nesoi.seerr.android.core.net
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -111,14 +112,26 @@ object Routes {
     // Requests.
     fun userQuota(userId: Int) = Route("GET", "/user/$userId/quota")
 
-    /** `seasons` is null for a movie. */
-    fun createRequest(mediaType: String, mediaId: Int, is4k: Boolean, seasons: List<Int>?) =
+    /**
+     * `seasons` is null for a movie. [extra] adds what only some people may set: the Radarr or
+     * Sonarr destination (`serverId`, `profileId`, `rootFolder`, `languageProfileId`, `tags`),
+     * `userId` to request for someone else, and `ignoreQuota`.
+     */
+    fun createRequest(mediaType: String, mediaId: Int, is4k: Boolean, seasons: List<Int>?, extra: Map<String, JsonElement> = emptyMap()) =
         Route("POST", "/request", buildJsonObject {
             put("mediaType", mediaType)
             put("mediaId", mediaId)
             put("is4k", is4k)
             if (seasons != null) put("seasons", JsonArray(seasons.map { JsonPrimitive(it) }))
+            extra.forEach { (name, value) -> put(name, value) }
         })
+
+    // The Radarr and Sonarr instances requests can go to. [kind] is `radarr` or `sonarr`.
+    fun serviceServers(kind: String) = Route("GET", "/service/$kind")
+    fun serviceServer(kind: String, id: Int) = Route("GET", "/service/$kind/$id")
+
+    /** Everyone, by display name, for requesting on someone's behalf. */
+    fun usersForRequest(take: Int = 1000) = Route("GET", "/user", query = listOf("take" to "$take", "sort" to "displayname"))
 
     /** The requests list pages by offset, not page number. */
     fun requests(skip: Int, take: Int, filter: String, sort: String) =

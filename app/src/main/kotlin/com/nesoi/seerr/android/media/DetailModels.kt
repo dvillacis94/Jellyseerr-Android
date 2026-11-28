@@ -95,6 +95,12 @@ data class MovieDetails(
 @Serializable
 data class TvSeason(val seasonNumber: Int, val name: String? = null, val episodeCount: Int? = null, val airDate: String? = null)
 
+@Serializable
+data class Keyword(val id: Int, val name: String? = null)
+
+/** TMDB's "anime" keyword. Sonarr instances can send anime to their own profile and folder. */
+const val ANIME_KEYWORD_ID = 210024
+
 /** `GET /tv/{id}`. */
 @Serializable
 data class TvDetails(
@@ -107,6 +113,7 @@ data class TvDetails(
     val numberOfSeasons: Int? = null,
     val numberOfEpisodes: Int? = null,
     val seasons: List<TvSeason> = emptyList(),
+    val keywords: List<Keyword> = emptyList(),
     override val genres: List<Genre> = emptyList(),
     val networks: List<Company> = emptyList(),
     override val posterPath: String? = null,
@@ -122,6 +129,7 @@ data class TvDetails(
     override val date get() = firstAirDate
     override val runtimeMinutes get() = episodeRunTime.firstOrNull()
     override val studio get() = networks.firstOrNull()?.name
+    val isAnime: Boolean get() = keywords.any { it.id == ANIME_KEYWORD_ID }
 }
 
 /** `GET /collection/{id}`. */

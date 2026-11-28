@@ -87,13 +87,6 @@ fun MediaShelf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit, onOpen: (MediaItem) -> Unit) {
-    val state by loader.state.collectAsStateWithLifecycle()
-    val grid = rememberLazyGridState()
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(loader) { loader.loadIfNeeded() }
-    LaunchedEffect(loader, grid) {
-        snapshotFlow { grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { loader.loadMoreIfNeeded(it) }
-    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -106,24 +99,38 @@ fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit, on
             )
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when {
-                state.isFailed -> ErrorMessage(state.error, onRetry = { scope.launch { loader.retry() } })
-                !state.hasLoaded -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                state.items.isEmpty() -> Text(
-                    stringResource(R.string.list_empty),
-                    Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(CardWidth),
-                    state = grid,
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(state.items, key = { it.key }) { item -> MediaCard(item, onClick = item.detailRoute?.let { { onOpen(item) } }) }
-                }
+        MediaGrid(loader, onOpen, Modifier.padding(padding))
+    }
+}
+
+/** The grid itself: loads its first page, then more as the user nears the end. */
+@Composable
+fun MediaGrid(loader: PagedLoader, onOpen: (MediaItem) -> Unit, modifier: Modifier = Modifier) {
+    val state by loader.state.collectAsStateWithLifecycle()
+    val grid = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(loader) { loader.loadIfNeeded() }
+    LaunchedEffect(loader, grid) {
+        snapshotFlow { grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { loader.loadMoreIfNeeded(it) }
+    }
+    Box(modifier.fillMaxSize()) {
+        when {
+            state.isFailed -> ErrorMessage(state.error, onRetry = { scope.launch { loader.retry() } })
+            !state.hasLoaded -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+            state.items.isEmpty() -> Text(
+                stringResource(R.string.list_empty),
+                Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            else -> LazyVerticalGrid(
+                columns = GridCells.Adaptive(CardWidth),
+                state = grid,
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                items(state.items, key = { it.key }) { item -> MediaCard(item, onClick = item.detailRoute?.let { { onOpen(item) } }) }
             }
         }
     }

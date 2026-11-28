@@ -1,39 +1,40 @@
 package com.nesoi.seerr.android.ui.browse
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RangeSlider
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -60,15 +61,31 @@ import com.nesoi.seerr.android.media.seriesStatuses
 import com.nesoi.seerr.android.media.sortOptions
 import java.util.Calendar
 
-private const val TOP_SERVICES = 24
-private const val RUNTIME_STEP = 15
-private const val RUNTIME_TOP = 300
 private const val OLDEST_YEAR = 1900
+private val runtimes = (15..240 step 15).toList()
+
+private sealed interface Page {
+    data object Main : Page
+    data object Genres : Page
+    data object Statuses : Page
+    data object Language : Page
+    data object Services : Page
+}
+
+private sealed interface Naming {
+    data object Save : Naming
+    data class Rename(val filter: SavedFilter) : Naming
+}
+
+/** One row of a pick list: a code, what to call it and, for streaming services, a logo. */
+private data class Choice(val id: Int, val name: String, val logo: String? = null)
 
 /**
- * Pick filters for a tab. Changes are held here until Done, so backing out leaves the grid alone.
+ * Pick filters for a tab. Like the iOS app, the short choices are popups on this page and the long
+ * lists (genres, languages, streaming services) open as pages of their own with a search box.
+ * Changes are held until Apply, so backing out leaves the grid alone.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
     val applied by model.filters.collectAsStateWithLifecycle()
@@ -78,156 +95,70 @@ fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
     val regions by model.options.regions.collectAsStateWithLifecycle()
     val providers by model.options.providers.collectAsStateWithLifecycle()
     var draft by remember { mutableStateOf(applied) }
+    var page by remember { mutableStateOf<Page>(Page.Main) }
     var naming by remember { mutableStateOf<Naming?>(null) }
-    var pickingLanguage by remember { mutableStateOf(false) }
     var pickingRegion by remember { mutableStateOf(false) }
-    var showAllServices by remember { mutableStateOf(false) }
     val isMovies = model.type == TitleType.Movie
     val region = draft.region ?: model.defaultRegion() ?: "US"
 
     LaunchedEffect(Unit) { model.options.load() }
     LaunchedEffect(region) { model.options.loadProviders(region) }
+    BackHandler(enabled = page != Page.Main) { page = Page.Main }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Text(stringResource(R.string.filters_title), style = MaterialTheme.typography.titleLarge)
-
-            if (saved.isNotEmpty()) {
-                Section(stringResource(R.string.filters_saved)) {
-                    saved.forEach { filter ->
-                        SavedRow(
-                            filter,
-                            onUse = { draft = filter.filters },
-                            onRename = { naming = Naming.Rename(filter) },
-                            onDelete = { model.delete(filter.id) },
-                        )
-                    }
-                }
-            }
-
-            Section(stringResource(R.string.filters_sort)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    model.type.sortOptions().forEach { option ->
-                        FilterChip(
-                            selected = draft.sort == option.value,
-                            onClick = { draft = draft.copy(sort = option.value) },
-                            label = { Text(stringResource(option.label)) },
-                            modifier = Modifier.padding(bottom = 4.dp),
-                        )
-                    }
-                }
-            }
-
-            Section(stringResource(R.string.filters_genres)) {
-                if (genres == null) {
-                    Text(stringResource(R.string.filters_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        genres.orEmpty().forEach { genre ->
-                            FilterChip(
-                                selected = genre.id in draft.genres,
-                                onClick = { draft = draft.copy(genres = draft.genres.toggle(genre.id)) },
-                                label = { Text(genre.name) },
-                                modifier = Modifier.padding(bottom = 4.dp),
-                            )
-                        }
-                    }
-                }
-            }
-
-            Section(stringResource(if (isMovies) R.string.filters_released else R.string.filters_first_aired)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    YearPicker(stringResource(R.string.filters_from), draft.yearFrom, { draft = draft.copy(yearFrom = it) }, Modifier.weight(1f))
-                    YearPicker(stringResource(R.string.filters_to), draft.yearTo, { draft = draft.copy(yearTo = it) }, Modifier.weight(1f))
-                }
-            }
-
-            Section(stringResource(R.string.filters_language)) {
-                OutlinedButton(onClick = { pickingLanguage = true }, enabled = languages != null) {
-                    Text(
-                        languages?.firstOrNull { it.code == draft.language }?.name
-                            ?: draft.language
-                            ?: stringResource(R.string.filters_any),
-                    )
-                }
-            }
-
-            Section(stringResource(R.string.filters_score), value = draft.minScore.takeIf { it > 0 }?.let { stringResource(R.string.filters_score_value, it) }) {
-                Slider(
-                    value = draft.minScore.toFloat(),
-                    onValueChange = { draft = draft.copy(minScore = it.toInt()) },
-                    valueRange = 0f..10f,
-                    steps = 9,
+        Box(Modifier.fillMaxSize().navigationBarsPadding()) {
+            when (page) {
+                Page.Main -> MainPage(
+                    model = model,
+                    draft = draft,
+                    onDraft = { draft = it },
+                    saved = saved,
+                    genreNames = genres.orEmpty().associate { it.id to it.name },
+                    languageName = languages?.firstOrNull { it.code == draft.language }?.name ?: draft.language,
+                    onOpen = { page = it },
+                    onCancel = onDismiss,
+                    onApply = { model.apply(draft); onDismiss() },
+                    onSave = { naming = Naming.Save },
+                    onRename = { naming = Naming.Rename(it) },
                 )
-            }
-
-            Section(stringResource(R.string.filters_runtime), value = runtimeLabel(draft)) {
-                RangeSlider(
-                    value = (draft.runtimeMin ?: 0).toFloat()..(draft.runtimeMax ?: RUNTIME_TOP).toFloat(),
-                    onValueChange = { range ->
-                        draft = draft.copy(
-                            runtimeMin = range.start.toInt().takeIf { it > 0 },
-                            runtimeMax = range.endInclusive.toInt().takeIf { it < RUNTIME_TOP },
+                Page.Genres -> MultiSelectPage(
+                    title = stringResource(R.string.filters_genres),
+                    footer = stringResource(R.string.filters_genres_footer),
+                    choices = genres?.map { Choice(it.id, it.name) },
+                    selected = draft.genres,
+                    onChange = { draft = draft.copy(genres = it) },
+                    onBack = { page = Page.Main },
+                )
+                Page.Statuses -> MultiSelectPage(
+                    title = stringResource(R.string.filters_status),
+                    footer = stringResource(R.string.filters_status_footer),
+                    choices = seriesStatuses.map { (code, label) -> Choice(code, stringResource(label)) },
+                    selected = draft.statuses,
+                    onChange = { draft = draft.copy(statuses = it) },
+                    onBack = { page = Page.Main },
+                )
+                Page.Language -> LanguagePage(
+                    languages = languages?.map { it.code to it.name },
+                    selected = draft.language,
+                    onPick = { draft = draft.copy(language = it); page = Page.Main },
+                    onBack = { page = Page.Main },
+                )
+                Page.Services -> MultiSelectPage(
+                    title = stringResource(R.string.filters_services),
+                    footer = stringResource(R.string.filters_services_footer),
+                    choices = providers[region]?.map { Choice(it.id, it.name, it.logoPath) },
+                    selected = draft.providers,
+                    onChange = { draft = draft.copy(providers = it, region = region) },
+                    onBack = { page = Page.Main },
+                    header = {
+                        ValueRow(
+                            stringResource(R.string.filters_region_label),
+                            regions?.firstOrNull { it.code == region }?.name ?: region,
+                            onClick = { if (regions != null) pickingRegion = true },
                         )
+                        HorizontalDivider()
                     },
-                    valueRange = 0f..RUNTIME_TOP.toFloat(),
-                    steps = RUNTIME_TOP / RUNTIME_STEP - 1,
                 )
-            }
-
-            Section(stringResource(R.string.filters_services)) {
-                OutlinedButton(onClick = { pickingRegion = true }, enabled = regions != null) {
-                    Text(stringResource(R.string.filters_region, regions?.firstOrNull { it.code == region }?.name ?: region))
-                }
-                val list = providers[region]
-                when {
-                    list == null -> Text(stringResource(R.string.filters_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    list.isEmpty() -> Text(stringResource(R.string.filters_no_services), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Servers list hundreds, so start with the most used and anything chosen.
-                        val shown = if (showAllServices) list else list.filterIndexed { index, it -> index < TOP_SERVICES || it.id in draft.providers }
-                        shown.forEach { provider ->
-                            FilterChip(
-                                selected = provider.id in draft.providers,
-                                onClick = { draft = draft.copy(providers = draft.providers.toggle(provider.id), region = region) },
-                                label = { Text(provider.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                leadingIcon = provider.logoPath?.let { logo ->
-                                    { AsyncImage(TmdbImage.logo(logo), contentDescription = null, modifier = Modifier.size(20.dp)) }
-                                },
-                                modifier = Modifier.padding(bottom = 4.dp),
-                            )
-                        }
-                        if (!showAllServices && list.size > shown.size) {
-                            TextButton(onClick = { showAllServices = true }) { Text(stringResource(R.string.filters_show_all, list.size)) }
-                        }
-                    }
-                }
-            }
-
-            if (!isMovies) {
-                Section(stringResource(R.string.filters_status)) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        seriesStatuses.forEach { (code, label) ->
-                            FilterChip(
-                                selected = code in draft.statuses,
-                                onClick = { draft = draft.copy(statuses = draft.statuses.toggle(code)) },
-                                label = { Text(stringResource(label)) },
-                                modifier = Modifier.padding(bottom = 4.dp),
-                            )
-                        }
-                    }
-                }
-            }
-
-            HorizontalDivider()
-            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { draft = DiscoverFilters() }, enabled = !draft.isEmpty) { Text(stringResource(R.string.filters_reset)) }
-                TextButton(onClick = { naming = Naming.Save }, enabled = !draft.isEmpty) { Text(stringResource(R.string.filters_save)) }
-                Box(Modifier.weight(1f))
-                Button(onClick = { model.apply(draft); onDismiss() }) { Text(stringResource(R.string.filters_done)) }
             }
         }
     }
@@ -246,18 +177,9 @@ fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
             },
         )
     }
-    if (pickingLanguage) {
-        PickerDialog(
-            title = stringResource(R.string.filters_language),
-            options = languages.orEmpty().map { it.code to it.name },
-            selected = draft.language,
-            onPick = { draft = draft.copy(language = it) },
-            onDismiss = { pickingLanguage = false },
-        )
-    }
     if (pickingRegion) {
-        PickerDialog(
-            title = stringResource(R.string.filters_services),
+        SearchPickerDialog(
+            title = stringResource(R.string.filters_region_label),
             options = regions.orEmpty().map { it.code to it.name },
             selected = region,
             // Another region has other services, so the ones chosen no longer apply.
@@ -268,61 +190,234 @@ fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
     }
 }
 
-private sealed interface Naming {
-    data object Save : Naming
-    data class Rename(val filter: SavedFilter) : Naming
-}
-
-private fun <T> Set<T>.toggle(item: T): Set<T> = if (item in this) this - item else this + item
-
 @Composable
-private fun runtimeLabel(filters: DiscoverFilters): String? = when {
-    filters.runtimeMin != null && filters.runtimeMax != null -> stringResource(R.string.filters_runtime_between, filters.runtimeMin, filters.runtimeMax)
-    filters.runtimeMin != null -> stringResource(R.string.filters_runtime_at_least, filters.runtimeMin)
-    filters.runtimeMax != null -> stringResource(R.string.filters_runtime_at_most, filters.runtimeMax)
-    else -> null
-}
-
-@Composable
-private fun Section(title: String, value: String? = null, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            value?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
-        }
-        content()
-    }
-}
-
-@Composable
-private fun SavedRow(filter: SavedFilter, onUse: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onUse), verticalAlignment = Alignment.CenterVertically) {
-        Text(filter.name, Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        IconButton(onClick = onRename) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.filters_rename)) }
-        IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.filters_delete)) }
-    }
-}
-
-@Composable
-private fun YearPicker(label: String, value: Int?, onChange: (Int?) -> Unit, modifier: Modifier = Modifier) {
-    var open by remember { mutableStateOf(false) }
+private fun MainPage(
+    model: BrowseModel,
+    draft: DiscoverFilters,
+    onDraft: (DiscoverFilters) -> Unit,
+    saved: List<SavedFilter>,
+    genreNames: Map<Int, String>,
+    languageName: String?,
+    onOpen: (Page) -> Unit,
+    onCancel: () -> Unit,
+    onApply: () -> Unit,
+    onSave: () -> Unit,
+    onRename: (SavedFilter) -> Unit,
+) {
+    val isMovies = model.type == TitleType.Movie
+    val any = stringResource(R.string.filters_any)
     val newest = remember { Calendar.getInstance().get(Calendar.YEAR) + 1 }
-    Box(modifier) {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("$label: ${value ?: stringResource(R.string.filters_any)}")
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.filters_cancel)) }
+            Text(
+                stringResource(R.string.filters_title),
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            TextButton(onClick = onApply) { Text(stringResource(R.string.filters_apply)) }
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.heightIn(max = 320.dp)) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.filters_any)) }, onClick = { onChange(null); open = false })
-            for (year in newest downTo OLDEST_YEAR) {
-                DropdownMenuItem(text = { Text("$year") }, onClick = { onChange(year); open = false })
+        HorizontalDivider()
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            val sorts = model.type.sortOptions()
+            DropdownRow(
+                stringResource(R.string.filters_sort),
+                sorts.firstOrNull { it.value == draft.sort }?.let { stringResource(it.label) } ?: draft.sort,
+                sorts.map { it.value to stringResource(it.label) },
+            ) { onDraft(draft.copy(sort = it)) }
+
+            SectionGap()
+            ValueRow(stringResource(R.string.filters_genres), summary(draft.genres, genreNames, any), onClick = { onOpen(Page.Genres) }, chevron = true)
+            if (!isMovies) {
+                val statusNames = seriesStatuses.associate { (code, label) -> code to stringResource(label) }
+                ValueRow(stringResource(R.string.filters_status), summary(draft.statuses, statusNames, any), onClick = { onOpen(Page.Statuses) }, chevron = true)
+            }
+            ValueRow(stringResource(R.string.filters_language), languageName ?: any, onClick = { onOpen(Page.Language) }, chevron = true)
+
+            SectionGap()
+            val years: List<Pair<Int?, String>> = listOf<Pair<Int?, String>>(null to any) + (newest downTo OLDEST_YEAR).map { it to "$it" }
+            SectionTitle(stringResource(if (isMovies) R.string.filters_released else R.string.filters_first_aired))
+            DropdownRow(stringResource(R.string.filters_from), draft.yearFrom?.toString() ?: any, years) { onDraft(draft.copy(yearFrom = it)) }
+            DropdownRow(stringResource(R.string.filters_to), draft.yearTo?.toString() ?: any, years) { onDraft(draft.copy(yearTo = it)) }
+
+            SectionGap()
+            val scores: List<Pair<Int, String>> = listOf(0 to any) + (1..9).map { it to stringResource(R.string.filters_score_value, it) }
+            DropdownRow(stringResource(R.string.filters_score), scores.first { it.first == draft.minScore }.second, scores) { onDraft(draft.copy(minScore = it)) }
+            val times: List<Pair<Int?, String>> = listOf<Pair<Int?, String>>(null to any) + runtimes.map { it to stringResource(R.string.filters_minutes, it) }
+            DropdownRow(stringResource(R.string.filters_runtime_min), draft.runtimeMin?.let { stringResource(R.string.filters_minutes, it) } ?: any, times) { onDraft(draft.copy(runtimeMin = it)) }
+            DropdownRow(stringResource(R.string.filters_runtime_max), draft.runtimeMax?.let { stringResource(R.string.filters_minutes, it) } ?: any, times) { onDraft(draft.copy(runtimeMax = it)) }
+
+            SectionGap()
+            ValueRow(
+                stringResource(R.string.filters_services),
+                if (draft.providers.isEmpty()) any else stringResource(R.string.filters_selected, draft.providers.size),
+                onClick = { onOpen(Page.Services) },
+                chevron = true,
+            )
+
+            SectionGap()
+            TextButton(onClick = onSave, enabled = !draft.isEmpty, modifier = Modifier.padding(horizontal = 8.dp)) { Text(stringResource(R.string.filters_save)) }
+            TextButton(onClick = { onDraft(DiscoverFilters()) }, enabled = !draft.isEmpty, modifier = Modifier.padding(horizontal = 8.dp)) {
+                Text(stringResource(R.string.filters_reset))
+            }
+
+            if (saved.isNotEmpty()) {
+                SectionGap()
+                SectionTitle(stringResource(R.string.filters_saved))
+                saved.forEach { filter ->
+                    Row(Modifier.fillMaxWidth().clickable { onDraft(filter.filters) }.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(filter.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        IconButton(onClick = { onRename(filter) }) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.filters_rename)) }
+                        IconButton(onClick = { model.delete(filter.id) }) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.filters_delete)) }
+                    }
+                }
+            }
+            SectionGap()
+        }
+    }
+}
+
+/** "Any", the name when one or two are picked, else how many. */
+@Composable
+private fun summary(ids: Set<Int>, names: Map<Int, String>, any: String): String {
+    if (ids.isEmpty()) return any
+    val known = ids.mapNotNull { names[it] }.sorted()
+    return if (known.size == ids.size && known.size <= 2) known.joinToString(", ") else stringResource(R.string.filters_selected, ids.size)
+}
+
+@Composable
+private fun SectionGap() = Box(Modifier.padding(top = 20.dp))
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+}
+
+/** A label with its current value on the right. Tapping it opens something. */
+@Composable
+private fun ValueRow(title: String, value: String, onClick: () -> Unit, chevron: Boolean = false) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Box(Modifier.weight(1f))
+        Text(
+            value,
+            Modifier.padding(start = 12.dp).widthIn(max = 200.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        // The same width with or without an arrow, so the values line up.
+        if (chevron) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        else Box(Modifier.size(24.dp))
+    }
+}
+
+/** A row that drops a short list of choices down from its value. */
+@Composable
+private fun <T> DropdownRow(title: String, value: String, options: List<Pair<T, String>>, onPick: (T) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        ValueRow(title, value, onClick = { open = true })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+            options.forEach { (code, label) ->
+                DropdownMenuItem(text = { Text(label) }, onClick = { onPick(code); open = false })
             }
         }
     }
 }
 
-/** A searchable list of (code, name). [onPick] gets null for "Any". */
 @Composable
-private fun PickerDialog(
+private fun PageHeader(title: String, onBack: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.list_back)) }
+        Text(title, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun SearchBox(query: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        singleLine = true,
+        placeholder = { Text(stringResource(R.string.filters_search)) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+/** A long list to tick items from, with its own search box. */
+@Composable
+private fun MultiSelectPage(
+    title: String,
+    footer: String,
+    choices: List<Choice>?,
+    selected: Set<Int>,
+    onChange: (Set<Int>) -> Unit,
+    onBack: () -> Unit,
+    header: @Composable () -> Unit = {},
+) {
+    var query by remember { mutableStateOf("") }
+    val shown = remember(choices, query) { choices.orEmpty().filter { it.name.contains(query.trim(), ignoreCase = true) } }
+    Column(Modifier.fillMaxSize()) {
+        PageHeader(title, onBack)
+        header()
+        SearchBox(query) { query = it }
+        when {
+            choices == null -> Text(stringResource(R.string.filters_loading), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            choices.isEmpty() -> Text(stringResource(R.string.filters_no_services), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> LazyColumn(Modifier.weight(1f)) {
+                items(shown, key = { it.id }) { choice ->
+                    val on = choice.id in selected
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onChange(if (on) selected - choice.id else selected + choice.id) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (choice.logo != null) {
+                            AsyncImage(TmdbImage.logo(choice.logo), contentDescription = null, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)))
+                        }
+                        Text(choice.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                        if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                item { Text(footer, Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+        }
+    }
+}
+
+/** Pick one language, or Any. */
+@Composable
+private fun LanguagePage(languages: List<Pair<String, String>>?, selected: String?, onPick: (String?) -> Unit, onBack: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    val shown = remember(languages, query) { languages.orEmpty().filter { it.second.contains(query.trim(), ignoreCase = true) } }
+    Column(Modifier.fillMaxSize()) {
+        PageHeader(stringResource(R.string.filters_language), onBack)
+        SearchBox(query) { query = it }
+        if (languages == null) {
+            Text(stringResource(R.string.filters_loading), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            LazyColumn(Modifier.weight(1f)) {
+                if (query.isBlank()) item { PickRow(stringResource(R.string.filters_any), selected == null) { onPick(null) } }
+                items(shown, key = { it.first }) { (code, name) -> PickRow(name, code == selected) { onPick(code) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickRow(text: String, selected: Boolean, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        if (selected) Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+    }
+}
+
+/** A searchable popup of (code, name), for the streaming region. [onPick] gets null for "Any". */
+@Composable
+private fun SearchPickerDialog(
     title: String,
     options: List<Pair<String, String>>,
     selected: String?,
@@ -345,26 +440,12 @@ private fun PickerDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    if (allowAny && query.isBlank()) {
-                        item { PickerRow(stringResource(R.string.filters_any), selected == null) { onPick(null); onDismiss() } }
-                    }
-                    items(shown, key = { it.first }) { (code, name) ->
-                        PickerRow(name, code == selected) { onPick(code); onDismiss() }
-                    }
+                    if (allowAny && query.isBlank()) item { PickRow(stringResource(R.string.filters_any), selected == null) { onPick(null); onDismiss() } }
+                    items(shown, key = { it.first }) { (code, name) -> PickRow(name, code == selected) { onPick(code); onDismiss() } }
                 }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.filters_cancel)) } },
-    )
-}
-
-@Composable
-private fun PickerRow(text: String, selected: Boolean, onClick: () -> Unit) {
-    Text(
-        text,
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
-        style = MaterialTheme.typography.bodyLarge,
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
     )
 }
 

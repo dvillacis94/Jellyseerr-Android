@@ -77,5 +77,16 @@ object Routes {
             if (seasons != null) put("seasons", JsonArray(seasons.map { JsonPrimitive(it) }))
         })
 
+    /** The requests list pages by offset, not page number. */
+    fun requests(skip: Int, take: Int, filter: String, sort: String) =
+        Route("GET", "/request", query = listOf("take" to "$take", "skip" to "$skip", "filter" to filter, "sort" to sort, "sortDirection" to "desc"))
+
+    /** `action` is `approve`, `decline` or `retry`. */
+    fun requestAction(id: Int, action: String) = Route("POST", "/request/$id/$action")
+
+    // Seerr answers 401, not 403, when someone may not delete a request. That is no reason to
+    // send them back to sign-in.
+    fun deleteRequest(id: Int) = Route("DELETE", "/request/$id", requiresSession = false)
+
     private fun paged(path: String, page: Int) = Route("GET", path, query = listOf("page" to "$page"))
 }

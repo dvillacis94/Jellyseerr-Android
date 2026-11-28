@@ -5,6 +5,7 @@ import com.nesoi.seerr.android.core.User
 import com.nesoi.seerr.android.core.net.ApiClient
 import com.nesoi.seerr.android.core.net.Routes
 import com.nesoi.seerr.android.core.net.fetch
+import com.nesoi.seerr.android.requests.RequestsModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ class SignedInModel(
     val watchlist = WatchlistStore(api)
     val discover = DiscoverModel(scope, api)
     val search = SearchModel(scope, api)
+    val requests = RequestsModel(scope, api, user)
 
     private val grids = mutableMapOf<MediaList, PagedLoader>()
 

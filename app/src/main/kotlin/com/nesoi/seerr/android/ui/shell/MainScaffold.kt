@@ -78,7 +78,7 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
 
     Scaffold(
         bottomBar = {
-            if (pushedRoutes.none { destination?.route?.startsWith(it) == true }) {
+            if (pushedRoutes.none { destination?.route?.let { route -> route == it || route.startsWith("$it/") } == true }) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(

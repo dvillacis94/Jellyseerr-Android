@@ -3,21 +3,11 @@ package com.nesoi.seerr.android.ui.discover
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -31,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nesoi.seerr.android.R
@@ -40,6 +29,7 @@ import com.nesoi.seerr.android.media.MediaList
 import com.nesoi.seerr.android.media.SignedInModel
 import com.nesoi.seerr.android.ui.media.ErrorMessage
 import com.nesoi.seerr.android.ui.media.MediaShelf
+import com.nesoi.seerr.android.ui.media.SearchField
 import com.nesoi.seerr.android.ui.media.SearchResults
 import kotlinx.coroutines.launch
 
@@ -64,7 +54,7 @@ fun DiscoverScreen(model: SignedInModel, onSeeAll: (MediaList) -> Unit, onOpen: 
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
         )
-        SearchField(query, search::setQuery, onSearch = { search.submit(); focus.clearFocus() })
+        SearchField(query, stringResource(R.string.discover_search_hint), search::setQuery, onSearch = { search.submit(); focus.clearFocus() })
 
         val loader = results
         when {
@@ -96,26 +86,4 @@ fun DiscoverScreen(model: SignedInModel, onSeeAll: (MediaList) -> Unit, onOpen: 
             }
         }
     }
-}
-
-@Composable
-private fun SearchField(query: String, onChange: (String) -> Unit, onSearch: () -> Unit) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onChange,
-        singleLine = true,
-        shape = CircleShape,
-        placeholder = { Text(stringResource(R.string.discover_search_hint)) },
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onChange("") }) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.discover_search_clear))
-                }
-            }
-        },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-    )
 }

@@ -42,6 +42,7 @@ import com.nesoi.seerr.android.media.MediaList
 import com.nesoi.seerr.android.media.TitleType
 import com.nesoi.seerr.android.media.detailRoute
 import com.nesoi.seerr.android.media.SignedInModel
+import com.nesoi.seerr.android.ui.browse.BrowseScreen
 import com.nesoi.seerr.android.ui.detail.CollectionScreen
 import com.nesoi.seerr.android.ui.detail.TitleScreen
 import com.nesoi.seerr.android.ui.requests.RequestsScreen
@@ -102,8 +103,8 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
             composable(AppTab.Discover.route) {
                 DiscoverScreen(model, onSeeAll = { navController.navigate("$LIST_ROUTE/${it.name}") }, onOpen = open)
             }
-            composable(AppTab.Movies.route) { ComingSoon(R.string.tab_movies) }
-            composable(AppTab.Series.route) { ComingSoon(R.string.tab_series) }
+            composable(AppTab.Movies.route) { BrowseScreen(model.movies, onOpen = open) }
+            composable(AppTab.Series.route) { BrowseScreen(model.series, onOpen = open) }
             composable(AppTab.Requests.route) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
             composable(AppTab.Profile.route) { ProfileScreen(user, onSignOut, onChangeServer) }
             composable("$LIST_ROUTE/{list}") { entry ->
@@ -132,22 +133,6 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
 }
 
 private val idArgument = listOf(navArgument("id") { type = NavType.IntType })
-
-@Composable
-private fun ComingSoon(title: Int) {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
-        Text(
-            stringResource(R.string.tab_coming_soon, stringResource(title)),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
 
 /** For now, just who is signed in and how to leave. The rest of Profile comes in a later phase. */
 @Composable

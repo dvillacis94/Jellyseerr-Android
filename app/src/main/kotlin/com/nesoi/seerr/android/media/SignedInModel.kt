@@ -31,6 +31,8 @@ class SignedInModel(
     val discover = DiscoverModel(scope, api)
     val search = SearchModel(scope, api)
     val requests = RequestsModel(scope, api, user)
+    val movies = BrowseModel(scope, api, TitleType.Movie)
+    val series = BrowseModel(scope, api, TitleType.Series)
 
     private val grids = mutableMapOf<MediaList, PagedLoader>()
 

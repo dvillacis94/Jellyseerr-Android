@@ -47,6 +47,7 @@ import com.nesoi.seerr.android.ui.requests.RequestsScreen
 import com.nesoi.seerr.android.ui.theme.Appearance
 import okhttp3.HttpUrl
 import com.nesoi.seerr.android.ui.discover.DiscoverScreen
+import com.nesoi.seerr.android.ui.browse.text
 import com.nesoi.seerr.android.ui.media.MediaGridScreen
 
 /** The signed-in app's tabs, in the order they appear. */
@@ -64,9 +65,10 @@ private const val TV_ROUTE = "tv"
 private const val COLLECTION_ROUTE = "collection"
 private const val NOTIFICATIONS_ROUTE = "notifications"
 private const val ISSUES_ROUTE = "issues"
+private const val SECTION_ROUTE = "section"
 
 /** Pages pushed over a tab. They cover the tab bar, as on iOS. */
-private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE, ISSUES_ROUTE)
+private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE, ISSUES_ROUTE, SECTION_ROUTE)
 
 @Composable
 fun MainScaffold(
@@ -113,8 +115,8 @@ fun MainScaffold(
             composable(AppTab.Discover.route) {
                 DiscoverScreen(model, onSeeAll = { navController.navigate("$LIST_ROUTE/${it.name}") }, onOpen = open)
             }
-            composable(AppTab.Movies.route) { BrowseScreen(model.movies, onOpen = open) }
-            composable(AppTab.Series.route) { BrowseScreen(model.series, onOpen = open) }
+            composable(AppTab.Movies.route) { BrowseScreen(model.movies, onOpen = open, onSeeAll = { navController.navigate("$SECTION_ROUTE/${TitleType.Movie.path}/${it.key}") }) }
+            composable(AppTab.Series.route) { BrowseScreen(model.series, onOpen = open, onSeeAll = { navController.navigate("$SECTION_ROUTE/${TitleType.Series.path}/${it.key}") }) }
             composable(AppTab.Requests.route) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
             composable(AppTab.Profile.route) {
                 ProfileScreen(
@@ -137,6 +139,15 @@ fun MainScaffold(
                     val detail = remember(id) { model.issueDetail(id, model.issues.list.value.state.value.items.firstOrNull { it.id == id }?.issue) }
                     IssueDetailScreen(detail, onBack = back, onOpenTitle = { navController.navigate(it) })
                 }
+            }
+            composable("$SECTION_ROUTE/{type}/{key}") { entry ->
+                val browse = when (entry.arguments?.getString("type")) {
+                    TitleType.Movie.path -> model.movies
+                    TitleType.Series.path -> model.series
+                    else -> null
+                }
+                val shelf = browse?.section(entry.arguments?.getString("key").orEmpty())
+                if (shelf != null) MediaGridScreen(shelf.list.title.text(), shelf.loader, onBack = back, onOpen = open)
             }
             composable("$LIST_ROUTE/{list}") { entry ->
                 val list = entry.arguments?.getString("list")?.let { name -> MediaList.entries.firstOrNull { it.name == name } }

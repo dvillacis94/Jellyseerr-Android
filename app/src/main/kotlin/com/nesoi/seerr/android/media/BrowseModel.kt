@@ -7,8 +7,14 @@ import com.nesoi.seerr.android.core.net.seerrJson
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -17,6 +23,7 @@ import java.util.UUID
  * that only finds that type. Filters can be saved by name, and the tab reopens with the ones it
  * last had.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class BrowseModel(
     private val scope: CoroutineScope,
     private val api: ApiClient,
@@ -42,6 +49,20 @@ class BrowseModel(
     val search = SearchModel(scope, api, only = type)
     val options = FilterOptions(scope, api, type)
 
+    private val _shelves = MutableStateFlow<List<BrowseShelf>>(emptyList())
+
+    /**
+     * The sections, which follow the filters, the saved filters and the genres. Empty until what
+     * the tab remembered has been read, so the first sections already use it.
+     */
+    val shelves: StateFlow<List<BrowseShelf>> = _shelves.asStateFlow()
+
+    /** Every section has loaded and none has a title, such as filters that nothing matches. */
+    val sectionsEmpty: Flow<Boolean> = _shelves.flatMapLatest { list ->
+        if (list.isEmpty()) flowOf(false)
+        else combine(list.map { it.loader.state }) { states -> states.all { it.hasLoaded && it.items.isEmpty() } }
+    }
+
     init {
         scope.launch {
             try {
@@ -55,7 +76,23 @@ class BrowseModel(
             } finally {
                 restored.complete(Unit)
             }
+            // Rebuilt as any of the three change. A section that is the same keeps what it loaded.
+            combine(_filters, _saved, options.genres) { filters, saved, genres ->
+                browseLists(type, genres.orEmpty(), filters, saved)
+            }.collect { lists ->
+                val current = _shelves.value.associateBy { it.list }
+                _shelves.value = lists.map { current[it] ?: BrowseShelf(it, PagedLoader { page -> api.fetch<MediaPage>(it.route(type, page)) }) }
+            }
         }
+    }
+
+    /** The section behind a "See all", by [BrowseList.key]. */
+    fun section(key: String): BrowseShelf? = _shelves.value.firstOrNull { it.list.key == key }
+
+    /** Pull to refresh: sections that have loaded start over, the rest load when they are shown. */
+    suspend fun refreshSections() {
+        options.loadGenres()
+        coroutineScope { _shelves.value.filter { it.loader.state.value.hasLoaded }.forEach { launch { it.loader.reload() } } }
     }
 
     /** The saved filter the tab is showing right now, if it still matches one exactly. */

@@ -1,6 +1,27 @@
 package com.nesoi.seerr.android.ui.browse
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.nesoi.seerr.android.ui.media.MediaShelf
+import com.nesoi.seerr.android.media.SectionTitle
+import com.nesoi.seerr.android.media.BrowseList
+import com.nesoi.seerr.android.media.DiscoverFilters
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
@@ -45,7 +66,7 @@ import kotlinx.coroutines.launch
 /** The Movies or Series tab: a search box over a grid of everything, or over search results. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modifier = Modifier) {
+fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, onSeeAll: (BrowseList) -> Unit, modifier: Modifier = Modifier) {
     val search = model.search
     val query by search.query.collectAsStateWithLifecycle()
     val results by search.results.collectAsStateWithLifecycle()
@@ -55,6 +76,8 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
     var showFilters by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showManage by remember { mutableStateOf(false) }
+    // The sections show until someone asks for everything as one grid.
+    var showsGrid by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     var refreshing by remember { mutableStateOf(false) }
@@ -75,8 +98,14 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
                 onSearch = { search.submit(); focus.clearFocus() },
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = { showsGrid = !showsGrid }) {
+                Icon(
+                    if (showsGrid) Icons.Filled.ViewAgenda else Icons.Filled.GridView,
+                    contentDescription = stringResource(if (showsGrid) R.string.browse_show_sections else R.string.browse_show_all),
+                )
+            }
             Box {
-                IconButton(onClick = { showMenu = true }, enabled = !searching, modifier = Modifier.padding(end = 8.dp)) {
+                IconButton(onClick = { showMenu = true }, enabled = !searching, modifier = Modifier.padding(end = 4.dp)) {
                     BadgedBox(badge = { if (filters.activeCount() > 0) Badge { Text("${filters.activeCount()}") } }) {
                         Icon(Icons.Filled.FilterList, contentDescription = stringResource(R.string.filters_button))
                     }
@@ -125,20 +154,87 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
         if (loader != null) {
             SearchResults(loader, search.trimmedQuery, onOpen)
         } else {
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = {
-                    scope.launch {
-                        refreshing = true
-                        try { grid.reload() } finally { refreshing = false }
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                MediaGrid(grid, onOpen)
+            if (!filters.isEmpty) ActiveFiltersBar(filters.activeCount(), model.activeSaved(filters, saved)?.name, onEdit = { showFilters = true }, onClear = model::reset)
+            if (showsGrid) {
+                PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = {
+                        scope.launch {
+                            refreshing = true
+                            try { grid.reload() } finally { refreshing = false }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    MediaGrid(grid, onOpen)
+                }
+            } else {
+                Sections(model, filters, onOpen, onSeeAll, noMatch = if (!filters.isEmpty) stringResource(if (isMovies) R.string.browse_no_match_movies else R.string.browse_no_match_series) else null)
             }
         }
     }
     if (showFilters) FiltersSheet(model, onDismiss = { showFilters = false })
     if (showManage) ManageSavedFilters(model, onDismiss = { showManage = false })
+}
+
+/** What is on, with a way to change or clear it, above the sections. */
+@Composable
+private fun ActiveFiltersBar(count: Int, savedName: String?, onEdit: () -> Unit, onClear: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onEdit).padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(if (savedName != null) Icons.Filled.Bookmark else Icons.Filled.FilterList, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Text(
+            savedName ?: if (count == 1) stringResource(R.string.browse_one_filter) else stringResource(R.string.browse_filters_count, count),
+            Modifier.weight(1f).padding(horizontal = 10.dp),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+        )
+        TextButton(onClick = onClear) { Text(stringResource(R.string.browse_clear_filters)) }
+    }
+}
+
+/** The Movies or Series tab as sections, like Discover. Each loads when it is first shown. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Sections(model: BrowseModel, filters: DiscoverFilters, onOpen: (MediaItem) -> Unit, onSeeAll: (BrowseList) -> Unit, noMatch: String?) {
+    val shelves by model.shelves.collectAsStateWithLifecycle()
+    val empty by model.sectionsEmpty.collectAsStateWithLifecycle(initialValue = false)
+    val scope = rememberCoroutineScope()
+    var refreshing by remember { mutableStateOf(false) }
+    // The genre sections need the genres, fetched the first time the sections are shown.
+    LaunchedEffect(model) { model.options.loadGenres() }
+    // New filters make a new set of sections, which start from the top.
+    val listState = rememberLazyListState()
+    LaunchedEffect(filters) { listState.scrollToItem(0) }
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = { scope.launch { refreshing = true; try { model.refreshSections() } finally { refreshing = false } } },
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            if (empty && noMatch != null) {
+                item { Text(noMatch, Modifier.fillMaxWidth().padding(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) }
+            }
+            items(shelves, key = { it.list.key }) { shelf ->
+                // Items are lazy, so this runs when the section nears the screen.
+                LaunchedEffect(shelf.loader) { shelf.loader.loadIfNeeded() }
+                MediaShelf(
+                    title = shelf.list.title.text(),
+                    loader = shelf.loader,
+                    onOpen = onOpen,
+                    onSeeAll = { onSeeAll(shelf.list) },
+                )
+            }
+        }
+    }
+}
+
+/** What a section is called, in the app's language. */
+@Composable
+fun SectionTitle.text(): String = when (this) {
+    is SectionTitle.Res -> stringResource(id)
+    is SectionTitle.Name -> text
 }

@@ -41,6 +41,10 @@ data class User(
     val userType: Int? = null,
     val plexUsername: String? = null,
     val jellyfinUsername: String? = null,
+    /** How many requests they have made; only on the user list and a user's own page. */
+    val requestCount: Int? = null,
+    /** An ISO date, as Seerr sends it. */
+    val createdAt: String? = null,
 ) {
     /**
      * Plex users' watchlist lives in Plex, and Seerr lists that one instead, so like the web app
@@ -69,11 +73,13 @@ object Permission {
     const val MANAGE_USERS = 8
     const val MANAGE_REQUESTS = 16
     const val REQUEST = 32
+    const val VOTE = 64
     const val AUTO_APPROVE = 128
     const val AUTO_APPROVE_MOVIE = 256
     const val AUTO_APPROVE_TV = 512
     const val REQUEST_4K = 1024
     const val REQUEST_ADVANCED = 8192
+    const val REQUEST_VIEW = 16384
     const val REQUEST_4K_MOVIE = 2048
     const val REQUEST_4K_TV = 4096
     const val REQUEST_MOVIE = 262144
@@ -87,4 +93,8 @@ object Permission {
     const val AUTO_REQUEST = 8388608
     const val AUTO_REQUEST_MOVIE = 16777216
     const val AUTO_REQUEST_TV = 33554432
+    const val RECENT_VIEW = 67108864
+    const val WATCHLIST_VIEW = 134217728
+    const val MANAGE_BLOCKLIST = 268435456
+    const val VIEW_BLOCKLIST = 1073741824
 }

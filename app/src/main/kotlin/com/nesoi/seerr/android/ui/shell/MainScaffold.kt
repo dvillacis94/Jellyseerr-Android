@@ -40,6 +40,8 @@ import com.nesoi.seerr.android.ui.detail.TitleScreen
 import com.nesoi.seerr.android.notifications.NotificationChannel
 import com.nesoi.seerr.android.ui.issues.IssueDetailScreen
 import com.nesoi.seerr.android.ui.issues.IssuesScreen
+import com.nesoi.seerr.android.ui.users.UserEditScreen
+import com.nesoi.seerr.android.ui.users.UsersScreen
 import com.nesoi.seerr.android.ui.notifications.NotificationChannelScreen
 import com.nesoi.seerr.android.ui.notifications.NotificationSettingsScreen
 import com.nesoi.seerr.android.ui.profile.ProfileScreen
@@ -65,10 +67,11 @@ private const val TV_ROUTE = "tv"
 private const val COLLECTION_ROUTE = "collection"
 private const val NOTIFICATIONS_ROUTE = "notifications"
 private const val ISSUES_ROUTE = "issues"
+private const val USERS_ROUTE = "users"
 private const val SECTION_ROUTE = "section"
 
 /** Pages pushed over a tab. They cover the tab bar, as on iOS. */
-private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE, ISSUES_ROUTE, SECTION_ROUTE)
+private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE, ISSUES_ROUTE, USERS_ROUTE, SECTION_ROUTE)
 
 @Composable
 fun MainScaffold(
@@ -123,6 +126,7 @@ fun MainScaffold(
                     user, serverUrl, settings?.applicationTitle, appearance, onAppearance, onSignOut, onChangeServer,
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
                     onOpenIssues = if (model.issues.rules.canViewIssues) ({ navController.navigate(ISSUES_ROUTE) }) else null,
+                    onOpenUsers = if (model.users.rules.canManageUsers) ({ navController.navigate(USERS_ROUTE) }) else null,
                 )
             }
             composable(NOTIFICATIONS_ROUTE) {
@@ -133,6 +137,16 @@ fun MainScaffold(
             }
             composable(ISSUES_ROUTE) {
                 IssuesScreen(model.issues, onBack = back, onOpen = { navController.navigate("$ISSUES_ROUTE/${it.id}") })
+            }
+            composable(USERS_ROUTE) {
+                UsersScreen(model.users, serverUrl, onBack = back, onOpen = { navController.navigate("$USERS_ROUTE/${it.id}") })
+            }
+            composable("$USERS_ROUTE/{id}", arguments = idArgument) { entry ->
+                entry.arguments?.getInt("id")?.let { id ->
+                    // Opened from the list, so the row is there; a bare id has nothing to show.
+                    val edit = remember(id) { model.users.list.value.state.value.items.firstOrNull { it.id == id }?.let(model::userEdit) }
+                    if (edit != null) UserEditScreen(edit, serverUrl, onBack = back, onSaved = model.users::didUpdate)
+                }
             }
             composable("$ISSUES_ROUTE/{id}", arguments = idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->

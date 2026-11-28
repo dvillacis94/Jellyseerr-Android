@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -223,11 +224,10 @@ private fun TitleContent(
                 }
             }
             details.trailerUrl()?.let { url ->
-                OutlinedButton(onClick = { uri.openUri(url) }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                    Text(stringResource(R.string.detail_trailer), Modifier.padding(start = 8.dp))
-                }
+                TitleActionButton(Icons.Filled.PlayArrow, stringResource(R.string.detail_trailer), onClick = { uri.openUri(url) })
             }
+            // Right under the trailer, as on iOS, with the title's open issues below it.
+            TitleIssuesSection(details, issues.rules, newReport, onOpenIssue)
             Overview(details.tagline, details.overview)
             (details as? MovieDetails)?.collection?.let { collection ->
                 OutlinedButton(onClick = { onOpenCollection(collection.id) }, modifier = Modifier.fillMaxWidth()) {
@@ -239,7 +239,6 @@ private fun TitleContent(
                 }
             }
             Facts(facts(details))
-            TitleIssuesSection(details, issues.rules, newReport, onOpenIssue)
         }
 
         CastShelf(details.credits?.cast.orEmpty())
@@ -316,7 +315,8 @@ private fun headline(details: TitleDetails): String? =
 private fun Overview(tagline: String?, overview: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         tagline?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // The tagline reads as a quote, apart from the overview.
+            Text(it, style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         overview?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     }

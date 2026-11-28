@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +31,7 @@ import com.nesoi.seerr.android.issues.canReportIssue
 import com.nesoi.seerr.android.issues.formatDateTime
 import com.nesoi.seerr.android.issues.openIssues
 import com.nesoi.seerr.android.media.TitleDetails
+import com.nesoi.seerr.android.ui.detail.TitleActionButton
 
 /** A title's open issues, and "Report an issue" when it is in the library and the person may report. */
 @Composable
@@ -47,6 +47,9 @@ fun TitleIssuesSection(
     var reporting by remember { mutableStateOf<ReportIssueModel?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (canReport) {
+            TitleActionButton(Icons.Filled.ReportProblem, stringResource(R.string.report_button), onClick = { reporting = newReport(details) })
+        }
         if (open.isNotEmpty()) {
             Text(pluralStringResource(R.plurals.title_open_issues, open.size, open.size), style = MaterialTheme.typography.titleLarge)
             Column {
@@ -54,12 +57,6 @@ fun TitleIssuesSection(
                     if (index > 0) HorizontalDivider()
                     IssueRow(issue, own = rules.isOwn(issue)) { onOpenIssue(issue.id) }
                 }
-            }
-        }
-        if (canReport) {
-            OutlinedButton(onClick = { reporting = newReport(details) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.ReportProblem, contentDescription = null)
-                Text(stringResource(R.string.report_button), Modifier.padding(start = 8.dp))
             }
         }
     }

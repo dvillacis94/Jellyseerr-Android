@@ -44,6 +44,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -185,10 +187,13 @@ fun IssueDetailScreen(model: IssueDetailModel, onBack: () -> Unit, onOpenTitle: 
     }
     editing?.let { comment ->
         var text by remember(comment.id) { mutableStateOf(comment.message.orEmpty()) }
+        val focus = remember { FocusRequester() }
+        // Ready to type as soon as the dialog opens.
+        LaunchedEffect(comment.id) { focus.requestFocus() }
         AlertDialog(
             onDismissRequest = { editing = null },
             title = { Text(stringResource(R.string.issue_edit_title)) },
-            text = { OutlinedTextField(value = text, onValueChange = { text = it }, minLines = 3) },
+            text = { OutlinedTextField(value = text, onValueChange = { text = it }, minLines = 3, modifier = Modifier.focusRequester(focus)) },
             confirmButton = {
                 TextButton(enabled = text.isNotBlank(), onClick = { editing = null; model.updateComment(comment, text) }) {
                     Text(stringResource(R.string.filters_confirm))

@@ -1,6 +1,21 @@
 package com.nesoi.seerr.android.ui.detail
 
 import androidx.compose.foundation.clickable
+import com.nesoi.seerr.android.ui.browse.ValueRow
+import com.nesoi.seerr.android.ui.browse.SearchPickerDialog
+import com.nesoi.seerr.android.ui.browse.DropdownRow
+import com.nesoi.seerr.android.media.TvDetails
+import com.nesoi.seerr.android.media.ServiceServer
+import com.nesoi.seerr.android.media.ServiceDetails
+import com.nesoi.seerr.android.media.RequestDraft
+import com.nesoi.seerr.android.media.AdvancedRequestOptions
+import android.text.format.Formatter
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.Switch
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +64,10 @@ fun RequestSheet(model: RequestModel, onDismiss: () -> Unit, onRequested: () -> 
     val outcome by model.outcome.collectAsStateWithLifecycle()
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-    LaunchedEffect(model) { model.loadQuota() }
+    val advancedOptions by model.advanced.collectAsStateWithLifecycle()
+    // Watched so the sheet redraws when the people to choose from have loaded.
+    val users by model.users.collectAsStateWithLifecycle()
+    LaunchedEffect(model) { model.loadQuota(); model.loadUsers() }
 
     fun close() = scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
 
@@ -75,22 +93,37 @@ fun RequestSheet(model: RequestModel, onDismiss: () -> Unit, onRequested: () -> 
                 Text(stringResource(R.string.request_4k_only), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
+            if (users.isNotEmpty() && model.canChooseUser(draft)) RequestAs(model, draft)
+
             if (model.details.type == TitleType.Series) Seasons(model)
 
-            val quota = if (model.details.type == TitleType.Movie) draft.quota?.movie else draft.quota?.tv
+            advancedOptions?.let { Destination(it, isAnime = (model.details as? TvDetails)?.isAnime == true) }
+
+            val quota = model.quotaFor(draft) ?: if (model.details.type == TitleType.Movie) draft.quota?.movie else draft.quota?.tv
             QuotaLine(quota, model.details.type)
+            if (model.canBypassQuota(draft)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.request_ignore_quota), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Switch(checked = draft.ignoreQuota, onCheckedChange = model::setIgnoreQuota)
+                }
+            }
 
             val blocker = model.blocker(draft)
+            val other = model.requestUserName(draft)
             blocker?.let {
                 Text(
-                    stringResource(
-                        when (it) {
-                            Blocker.QuotaUsedUp -> R.string.request_quota_used_up
-                            Blocker.NoSeasons -> R.string.request_pick_seasons
-                            is Blocker.TooManySeasons -> R.string.request_too_many_seasons
-                        },
-                        (it as? Blocker.TooManySeasons)?.remaining ?: 0,
-                    ),
+                    when {
+                        it == Blocker.QuotaUsedUp && other != null -> stringResource(R.string.request_quota_used_up_other, other)
+                        it is Blocker.TooManySeasons && other != null -> stringResource(R.string.request_too_many_seasons_other, other, it.remaining)
+                        else -> stringResource(
+                            when (it) {
+                                Blocker.QuotaUsedUp -> R.string.request_quota_used_up
+                                Blocker.NoSeasons -> R.string.request_pick_seasons
+                                is Blocker.TooManySeasons -> R.string.request_too_many_seasons
+                            },
+                            (it as? Blocker.TooManySeasons)?.remaining ?: 0,
+                        )
+                    },
                     // Not picking anything yet is a prompt, not a mistake.
                     color = if (it == Blocker.NoSeasons) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
@@ -184,4 +217,137 @@ private fun QuotaLine(quota: QuotaStatus?, type: TitleType) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+/** "Request as": for an admin to ask on someone else's behalf. */
+@Composable
+private fun RequestAs(model: RequestModel, draft: RequestDraft) {
+    var picking by remember { mutableStateOf(false) }
+    val users = model.eligibleUsers(draft)
+    val current = users.firstOrNull { it.id == draft.requestUserId }
+    ValueRow(
+        stringResource(R.string.request_as),
+        current?.displayNameOrEmail ?: stringResource(R.string.request_as_you),
+        onClick = { picking = true },
+        chevron = true,
+    )
+    if (picking) {
+        SearchPickerDialog(
+            title = stringResource(R.string.request_as_title),
+            options = users.map { "${it.id}" to it.displayNameOrEmail },
+            selected = "${draft.requestUserId}",
+            onPick = { id -> id?.toIntOrNull()?.let(model::setRequestUser) },
+            onDismiss = { picking = false },
+            allowAny = false,
+        )
+    }
+}
+
+/** Where the request goes: the Radarr or Sonarr instance, quality, folder, language and tags. */
+@Composable
+private fun Destination(options: AdvancedRequestOptions, isAnime: Boolean) {
+    val state by options.state.collectAsStateWithLifecycle()
+    LaunchedEffect(options) { options.load() }
+    val details = state.details
+    when {
+        state.error != null -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            DestinationTitle()
+            Text(stringResource(R.string.request_destination_failed), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        !state.loaded || (details == null && state.loading) -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            DestinationTitle()
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(stringResource(R.string.request_destination_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        state.hasChoices -> Column {
+            DestinationTitle()
+            if (state.servers.size > 1) {
+                DropdownRow(
+                    stringResource(R.string.request_dest_server),
+                    state.servers.firstOrNull { it.id == state.serverId }?.let { serverLabel(it) } ?: "",
+                    state.servers.map { it.id to serverLabel(it) },
+                ) { options.selectServer(it) }
+            }
+            if (details != null) {
+                val active = details.server
+                if (details.profiles.size > 1) {
+                    val none = stringResource(R.string.request_dest_default)
+                    DropdownRow(
+                        stringResource(R.string.request_dest_quality),
+                        details.profiles.firstOrNull { it.id == state.profileId }?.let { defaultLabel(it.name, it.id == active.activeProfileId) } ?: none,
+                        details.profiles.map { it.id to defaultLabel(it.name, it.id == active.activeProfileId) },
+                    ) { options.setProfile(it) }
+                }
+                if (details.rootFolders.size > 1) {
+                    val none = stringResource(R.string.request_dest_default)
+                    val folders = details.rootFolders.mapNotNull { f -> f.path?.let { it to folderLabel(it, f.freeSpace) } }
+                    DropdownRow(
+                        stringResource(R.string.request_dest_folder),
+                        folders.firstOrNull { it.first == state.rootFolder }?.second ?: none,
+                        folders,
+                    ) { options.setRootFolder(it) }
+                }
+                details.languageProfiles?.takeIf { it.size > 1 }?.let { languages ->
+                    DropdownRow(
+                        stringResource(R.string.request_dest_language),
+                        languages.firstOrNull { it.id == state.languageProfileId }?.name ?: stringResource(R.string.request_dest_default),
+                        languages.map { it.id to it.name },
+                    ) { options.setLanguageProfile(it) }
+                }
+                details.tags?.takeIf { it.isNotEmpty() }?.let { tags -> TagsRow(tags, state.tags, options::setTags) }
+            } else if (state.loading) {
+                CircularProgressIndicator(Modifier.padding(vertical = 8.dp).size(20.dp), strokeWidth = 2.dp)
+            }
+            if (isAnime && state.servers.isNotEmpty() && details != null) {
+                Text(stringResource(R.string.request_destination_anime), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DestinationTitle() {
+    Text(stringResource(R.string.request_destination), style = MaterialTheme.typography.titleMedium)
+}
+
+@Composable
+private fun serverLabel(server: ServiceServer) = defaultLabel(server.name, server.isDefault)
+
+@Composable
+private fun defaultLabel(name: String, isDefault: Boolean) = if (isDefault) stringResource(R.string.request_dest_is_default, name) else name
+
+@Composable
+private fun folderLabel(path: String, freeSpace: Long?): String {
+    if (freeSpace == null) return path
+    return stringResource(R.string.request_dest_free, path, Formatter.formatFileSize(LocalContext.current, freeSpace))
+}
+
+/** Tags are chosen from a list, any number of them. */
+@Composable
+private fun TagsRow(tags: List<ServiceDetails.Tag>, selected: Set<Int>, onChange: (Set<Int>) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val summary = tags.filter { it.id in selected }.joinToString(", ") { it.label }.ifEmpty { stringResource(R.string.request_dest_none) }
+    ValueRow(stringResource(R.string.request_dest_tags), summary, onClick = { open = true }, chevron = true)
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(stringResource(R.string.request_dest_tags)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    tags.forEach { tag ->
+                        Row(
+                            Modifier.fillMaxWidth().toggleable(value = tag.id in selected, role = Role.Checkbox, onValueChange = { on -> onChange(if (on) selected + tag.id else selected - tag.id) }),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = tag.id in selected, onCheckedChange = null)
+                            Text(tag.label, Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.request_dest_done)) } },
+        )
+    }
 }

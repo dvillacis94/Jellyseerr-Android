@@ -376,4 +376,26 @@
         <item quantity="one">%1$d open issue</item>
         <item quantity="other">%1$d open issues</item>
     </plurals>
+
+    <!-- Request: destination, request as -->
+    <string name="request_as">Request as</string>
+    <string name="request_as_you">You</string>
+    <string name="request_as_title">Request as</string>
+    <string name="request_ignore_quota">Don\'t count against the quota</string>
+    <string name="request_quota_used_up_other">%1$s has reached their request limit.</string>
+    <string name="request_too_many_seasons_other">%1$s can request %2$d more seasons.</string>
+    <string name="request_destination">Destination</string>
+    <string name="request_destination_loading">Loading settings…</string>
+    <string name="request_destination_failed">Couldn\'t load the settings. The request will use the server\'s defaults.</string>
+    <string name="request_destination_anime">This series is an anime, so the instance\'s anime defaults are preselected.</string>
+    <string name="request_dest_server">Server</string>
+    <string name="request_dest_quality">Quality</string>
+    <string name="request_dest_folder">Root folder</string>
+    <string name="request_dest_language">Language</string>
+    <string name="request_dest_tags">Tags</string>
+    <string name="request_dest_default">Server default</string>
+    <string name="request_dest_none">None</string>
+    <string name="request_dest_is_default">%1$s (Default)</string>
+    <string name="request_dest_free">%1$s (%2$s free)</string>
+    <string name="request_dest_done">Done</string>
 </resources>

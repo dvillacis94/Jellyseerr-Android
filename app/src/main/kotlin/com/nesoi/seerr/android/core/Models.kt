@@ -52,6 +52,10 @@ data class User(
     fun has(vararg permission: Int): Boolean =
         permissions and Permission.ADMIN != 0 || permission.any { permissions and it != 0 }
 
+    /** Like [has], but every one of the permissions is needed (an admin still has them all). */
+    fun hasAll(vararg permission: Int): Boolean =
+        permissions and Permission.ADMIN != 0 || permission.all { permissions and it != 0 }
+
     val displayNameOrEmail: String
         get() = displayName ?: username ?: plexUsername ?: jellyfinUsername ?: email ?: "User $id"
 }
@@ -69,6 +73,7 @@ object Permission {
     const val AUTO_APPROVE_MOVIE = 256
     const val AUTO_APPROVE_TV = 512
     const val REQUEST_4K = 1024
+    const val REQUEST_ADVANCED = 8192
     const val REQUEST_4K_MOVIE = 2048
     const val REQUEST_4K_TV = 4096
     const val REQUEST_MOVIE = 262144

@@ -23,8 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,7 +52,6 @@ import coil3.compose.AsyncImage
 import com.nesoi.seerr.android.R
 import com.nesoi.seerr.android.media.BrowseModel
 import com.nesoi.seerr.android.media.DiscoverFilters
-import com.nesoi.seerr.android.media.SavedFilter
 import com.nesoi.seerr.android.media.TitleType
 import com.nesoi.seerr.android.media.TmdbImage
 import com.nesoi.seerr.android.media.seriesStatuses
@@ -72,11 +69,6 @@ private sealed interface Page {
     data object Services : Page
 }
 
-private sealed interface Naming {
-    data object Save : Naming
-    data class Rename(val filter: SavedFilter) : Naming
-}
-
 /** One row of a pick list: a code, what to call it and, for streaming services, a logo. */
 private data class Choice(val id: Int, val name: String, val logo: String? = null)
 
@@ -89,14 +81,13 @@ private data class Choice(val id: Int, val name: String, val logo: String? = nul
 @Composable
 fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
     val applied by model.filters.collectAsStateWithLifecycle()
-    val saved by model.saved.collectAsStateWithLifecycle()
     val genres by model.options.genres.collectAsStateWithLifecycle()
     val languages by model.options.languages.collectAsStateWithLifecycle()
     val regions by model.options.regions.collectAsStateWithLifecycle()
     val providers by model.options.providers.collectAsStateWithLifecycle()
     var draft by remember { mutableStateOf(applied) }
     var page by remember { mutableStateOf<Page>(Page.Main) }
-    var naming by remember { mutableStateOf<Naming?>(null) }
+    var naming by remember { mutableStateOf(false) }
     var pickingRegion by remember { mutableStateOf(false) }
     val isMovies = model.type == TitleType.Movie
     val region = draft.region ?: model.defaultRegion() ?: "US"
@@ -112,14 +103,12 @@ fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
                     model = model,
                     draft = draft,
                     onDraft = { draft = it },
-                    saved = saved,
                     genreNames = genres.orEmpty().associate { it.id to it.name },
                     languageName = languages?.firstOrNull { it.code == draft.language }?.name ?: draft.language,
                     onOpen = { page = it },
                     onCancel = onDismiss,
                     onApply = { model.apply(draft); onDismiss() },
-                    onSave = { naming = Naming.Save },
-                    onRename = { naming = Naming.Rename(it) },
+                    onSave = { naming = true },
                 )
                 Page.Genres -> MultiSelectPage(
                     title = stringResource(R.string.filters_genres),
@@ -163,18 +152,12 @@ fun FiltersSheet(model: BrowseModel, onDismiss: () -> Unit) {
         }
     }
 
-    naming?.let { mode ->
+    if (naming) {
         NameDialog(
-            title = stringResource(if (mode is Naming.Rename) R.string.filters_rename_title else R.string.filters_save_title),
-            initial = (mode as? Naming.Rename)?.filter?.name.orEmpty(),
-            onDismiss = { naming = null },
-            onConfirm = { name ->
-                when (mode) {
-                    Naming.Save -> { model.save(name, draft); onDismiss() }
-                    is Naming.Rename -> model.rename(mode.filter.id, name)
-                }
-                naming = null
-            },
+            title = stringResource(R.string.filters_save_title),
+            initial = "",
+            onDismiss = { naming = false },
+            onConfirm = { name -> model.save(name, draft); onDismiss() },
         )
     }
     if (pickingRegion) {
@@ -195,14 +178,12 @@ private fun MainPage(
     model: BrowseModel,
     draft: DiscoverFilters,
     onDraft: (DiscoverFilters) -> Unit,
-    saved: List<SavedFilter>,
     genreNames: Map<Int, String>,
     languageName: String?,
     onOpen: (Page) -> Unit,
     onCancel: () -> Unit,
     onApply: () -> Unit,
     onSave: () -> Unit,
-    onRename: (SavedFilter) -> Unit,
 ) {
     val isMovies = model.type == TitleType.Movie
     val any = stringResource(R.string.filters_any)
@@ -262,17 +243,6 @@ private fun MainPage(
                 Text(stringResource(R.string.filters_reset))
             }
 
-            if (saved.isNotEmpty()) {
-                SectionGap()
-                SectionTitle(stringResource(R.string.filters_saved))
-                saved.forEach { filter ->
-                    Row(Modifier.fillMaxWidth().clickable { onDraft(filter.filters) }.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(filter.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        IconButton(onClick = { onRename(filter) }) { Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.filters_rename)) }
-                        IconButton(onClick = { model.delete(filter.id) }) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.filters_delete)) }
-                    }
-                }
-            }
             SectionGap()
         }
     }
@@ -450,7 +420,7 @@ private fun SearchPickerDialog(
 }
 
 @Composable
-private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+internal fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var name by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,

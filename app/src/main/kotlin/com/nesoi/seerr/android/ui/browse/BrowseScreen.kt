@@ -1,16 +1,18 @@
 package com.nesoi.seerr.android.ui.browse
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
@@ -51,6 +53,8 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
     val saved by model.saved.collectAsStateWithLifecycle()
     val grid by model.grid.collectAsStateWithLifecycle()
     var showFilters by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showManage by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     var refreshing by remember { mutableStateOf(false) }
@@ -71,9 +75,41 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
                 onSearch = { search.submit(); focus.clearFocus() },
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = { showFilters = true }, enabled = !searching, modifier = Modifier.padding(end = 8.dp)) {
-                BadgedBox(badge = { if (filters.activeCount() > 0) Badge { Text("${filters.activeCount()}") } }) {
-                    Icon(Icons.Filled.FilterList, contentDescription = stringResource(R.string.filters_button))
+            Box {
+                IconButton(onClick = { showMenu = true }, enabled = !searching, modifier = Modifier.padding(end = 8.dp)) {
+                    BadgedBox(badge = { if (filters.activeCount() > 0) Badge { Text("${filters.activeCount()}") } }) {
+                        Icon(Icons.Filled.FilterList, contentDescription = stringResource(R.string.filters_button))
+                    }
+                }
+                val active = model.activeSaved(filters, saved)
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    if (saved.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.filters_saved),
+                            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        saved.forEach { filter ->
+                            DropdownMenuItem(
+                                text = { Text(filter.name) },
+                                trailingIcon = { if (filter.id == active?.id) Icon(Icons.Filled.Check, contentDescription = null) },
+                                // Choosing the one that is showing turns it off.
+                                onClick = { showMenu = false; if (filter.id == active?.id) model.reset() else model.apply(filter.filters) },
+                            )
+                        }
+                        HorizontalDivider()
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.filters_edit)) },
+                        leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
+                        onClick = { showMenu = false; showFilters = true },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.filters_manage)) },
+                        leadingIcon = { Icon(Icons.Filled.BookmarkBorder, contentDescription = null) },
+                        onClick = { showMenu = false; showManage = true },
+                    )
                 }
             }
         }
@@ -84,18 +120,6 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
-        } else if (saved.isNotEmpty()) {
-            val active = model.activeSaved(filters, saved)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 16.dp)) {
-                items(saved, key = { it.id }) { filter ->
-                    FilterChip(
-                        selected = filter.id == active?.id,
-                        // Tapping the one that is showing turns it off.
-                        onClick = { if (filter.id == active?.id) model.reset() else model.apply(filter.filters) },
-                        label = { Text(filter.name) },
-                    )
-                }
-            }
         }
         val loader = results
         if (loader != null) {
@@ -116,4 +140,5 @@ fun BrowseScreen(model: BrowseModel, onOpen: (MediaItem) -> Unit, modifier: Modi
         }
     }
     if (showFilters) FiltersSheet(model, onDismiss = { showFilters = false })
+    if (showManage) ManageSavedFilters(model, onDismiss = { showManage = false })
 }

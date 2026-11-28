@@ -186,6 +186,10 @@
     <string name="filters_any">Any</string>
     <string name="filters_during_search">Filters don\'t apply to search.</string>
     <string name="filters_saved">Saved filters</string>
+    <string name="filters_edit">Edit filters…</string>
+    <string name="filters_manage">Manage saved filters…</string>
+    <string name="filters_manage_title">Saved filters</string>
+    <string name="filters_manage_empty">No saved filters yet. Save one from the filters page.</string>
     <string name="filters_save_title">Save this filter</string>
     <string name="filters_rename_title">Rename filter</string>
     <string name="filters_name">Name</string>

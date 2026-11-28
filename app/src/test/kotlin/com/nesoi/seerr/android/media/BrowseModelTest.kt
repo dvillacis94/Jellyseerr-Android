@@ -9,7 +9,10 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -177,9 +180,16 @@ class BrowseModelTest {
     }
 
     @Test fun `the options load once and a region's services are kept`() = runTest {
-        server.enqueue(json("""[{"id":28,"name":"Action"},{"id":12,"name":"Adventure"}]"""))
-        server.enqueue(json("""[{"iso_639_1":"ja","english_name":"Japanese","name":"日本語"}]"""))
-        server.enqueue(json("""[{"iso_3166_1":"US","english_name":"United States"}]"""))
+        // The three lists are asked for at the same time, so answer by path, not by order.
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) = when (request.url.encodedPath) {
+                "/api/v1/genres/movie" -> json("""[{"id":28,"name":"Action"},{"id":12,"name":"Adventure"}]""")
+                "/api/v1/languages" -> json("""[{"iso_639_1":"ja","english_name":"Japanese","name":"日本語"}]""")
+                "/api/v1/regions" -> json("""[{"iso_3166_1":"US","english_name":"United States"}]""")
+                "/api/v1/watchproviders/movies" -> json("""[{"id":8,"name":"Netflix","logoPath":"/n.jpg","displayPriority":1}]""")
+                else -> MockResponse.Builder().code(404).build()
+            }
+        }
         val options = FilterOptions(this, fixture.api, TitleType.Movie)
 
         options.load()
@@ -193,7 +203,6 @@ class BrowseModelTest {
         val paths = List(3) { server.takeRequest().url.encodedPath }.sorted()
         assertEquals(listOf("/api/v1/genres/movie", "/api/v1/languages", "/api/v1/regions"), paths)
 
-        server.enqueue(json("""[{"id":8,"name":"Netflix","logoPath":"/n.jpg","displayPriority":1}]"""))
         options.loadProviders("US")
         options.loadProviders("US")
         withContext(Dispatchers.Default) { withTimeout(5_000) { options.providers.first { "US" in it } } }

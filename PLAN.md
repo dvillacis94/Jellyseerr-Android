@@ -71,7 +71,7 @@ One branch and one PR per phase, in the Android repo unless noted. Each PR has u
 | 3 🔍 | Details | Movie, series and collection pages, cast, trailer, recommendations and similar, watchlist button and shelf, tapping any card. **Merged.** Left for later: Request and issue buttons (phases 4 and 7), season availability, Play links, a page for people |
 | 4 | Requesting | Split in two. **Part 1 (merged):** Request button and sheet with seasons, 4K and quota, using the user's permissions and what is already requested or available. **Part 2:** advanced Radarr and Sonarr options and requesting for another user (admin only) |
 | 5 🔍 | Requests tab | Paged list (`PagedList`, offset-based), filter and sort, approve, decline, retry, delete, review sheet. **In review.** Left for later: a pending-count badge on the tab, "my requests" for managers, editing a request (seasons, server, profile), and the admin-only paths, which are unit-tested only |
-| 6 | Movies and Series | Part 1 🔍 in review: browse grids and type-limited search. Part 2 pending: filters, saved filters, last-used filters |
+| 6 | Movies and Series | Part 1 merged: browse grids and type-limited search. Part 2 🔍 in review: filters, saved filters, last-used filters. Left for later: reordering saved filters, keywords, studio or network, vote count, certification |
 | 7 | Issues | Issues list in Profile, report an issue, issue page with comments and status |
 | 8 | Profile | Users management, notification settings for other services, appearance |
 | 9a | Relay: FCM sender | **In the iOS repo.** `platform` on device registration, an FCM sender next to the Apple one, tests, README. Redeploy the relay |

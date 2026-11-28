@@ -14,7 +14,7 @@ interface ServerPreferences {
     suspend fun setServerUrl(url: HttpUrl?)
 }
 
-private val Context.dataStore by preferencesDataStore(name = "settings")
+internal val Context.dataStore by preferencesDataStore(name = "settings")
 
 class DataStoreServerPreferences(private val context: Context) : ServerPreferences {
     override suspend fun serverUrl(): HttpUrl? =

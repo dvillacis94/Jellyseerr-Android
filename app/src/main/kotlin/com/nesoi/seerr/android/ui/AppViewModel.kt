@@ -11,6 +11,8 @@ import com.nesoi.seerr.android.core.PublicSettings
 import com.nesoi.seerr.android.core.ServerInfo
 import com.nesoi.seerr.android.core.User
 import com.nesoi.seerr.android.core.net.ApiClient
+import com.nesoi.seerr.android.media.FilterStorage
+import com.nesoi.seerr.android.media.MemoryFilterStorage
 import com.nesoi.seerr.android.media.SignedInModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +34,9 @@ class AppViewModel(
     private val auth: AuthService,
     private val plexFactory: (String?) -> PlexAuthService,
     private val api: ApiClient,
+    private val filters: FilterStorage = MemoryFilterStorage(),
 ) : ViewModel() {
-    constructor(container: AppContainer) : this(container.authService, container::plexAuthService, container.api)
+    constructor(container: AppContainer) : this(container.authService, container::plexAuthService, container.api, container.filterStorage)
 
     private val _state = MutableStateFlow<AppState>(AppState.Loading)
     val state: StateFlow<AppState> = _state.asStateFlow()
@@ -122,5 +125,5 @@ class AppViewModel(
         _state.value = AppState.Login(model)
     }
 
-    private fun signedIn(user: User, server: HttpUrl) = AppState.SignedIn(user, server, SignedInModel(viewModelScope, api, user))
+    private fun signedIn(user: User, server: HttpUrl) = AppState.SignedIn(user, server, SignedInModel(viewModelScope, api, user, filters, "$server.${user.id}"))
 }

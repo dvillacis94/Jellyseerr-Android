@@ -149,5 +149,6 @@ object TmdbImage {
     private const val BASE = "https://image.tmdb.org/t/p/"
     fun poster(path: String?): String? = path?.let { "${BASE}w342$it" }
     fun backdrop(path: String?): String? = path?.let { "${BASE}w780$it" }
+    fun logo(path: String?): String? = path?.let { "${BASE}w92$it" }
     fun profile(path: String?): String? = path?.let { "${BASE}w185$it" }
 }

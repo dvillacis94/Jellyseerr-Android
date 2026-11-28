@@ -19,6 +19,9 @@ class SignedInModel(
     private val scope: CoroutineScope,
     private val api: ApiClient,
     val user: User,
+    filterStorage: FilterStorage = MemoryFilterStorage(),
+    /** Tells one server and user's saved filters from another's. */
+    storageScope: String = "local",
 ) {
     /** Whether the user can add to and remove from the watchlist. */
     val canEditWatchlist: Boolean get() = user.canEditWatchlist
@@ -31,8 +34,9 @@ class SignedInModel(
     val discover = DiscoverModel(scope, api)
     val search = SearchModel(scope, api)
     val requests = RequestsModel(scope, api, user)
-    val movies = BrowseModel(scope, api, TitleType.Movie)
-    val series = BrowseModel(scope, api, TitleType.Series)
+    private val region: () -> String? = { _settings.value?.streamingRegion?.takeIf { it.isNotEmpty() } ?: _settings.value?.discoverRegion?.takeIf { it.isNotEmpty() } }
+    val movies = BrowseModel(scope, api, TitleType.Movie, filterStorage, "filters.$storageScope.${TitleType.Movie.path}", region)
+    val series = BrowseModel(scope, api, TitleType.Series, filterStorage, "filters.$storageScope.${TitleType.Series.path}", region)
 
     private val grids = mutableMapOf<MediaList, PagedLoader>()
 

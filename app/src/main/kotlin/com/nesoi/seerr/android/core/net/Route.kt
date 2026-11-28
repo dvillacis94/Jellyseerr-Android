@@ -38,10 +38,20 @@ object Routes {
     // Search and discover. TMDB-backed, so paged by `page`.
     fun search(query: String, page: Int) = Route("GET", "/search", query = listOf("query" to query, "page" to "$page"))
     fun discoverTrending(page: Int) = paged("/discover/trending", page)
-    fun discoverMovies(page: Int) = paged("/discover/movies", page)
+    /** [filters] are query items as built by `DiscoverFilters.queryItems`. */
+    fun discoverMovies(page: Int, filters: List<Pair<String, String>> = emptyList()) = paged("/discover/movies", page, filters)
     fun discoverMoviesUpcoming(page: Int) = paged("/discover/movies/upcoming", page)
-    fun discoverTv(page: Int) = paged("/discover/tv", page)
+    fun discoverTv(page: Int, filters: List<Pair<String, String>> = emptyList()) = paged("/discover/tv", page, filters)
     fun discoverTvUpcoming(page: Int) = paged("/discover/tv/upcoming", page)
+
+    // What the filters offer.
+    fun genres(mediaType: String) = Route("GET", "/genres/$mediaType")
+    val languages = Route("GET", "/languages")
+    val regions = Route("GET", "/regions")
+
+    /** [mediaType] is `movies` or `tv` here, unlike everywhere else. */
+    fun watchProviders(mediaType: String, region: String) =
+        Route("GET", "/watchproviders/$mediaType", query = listOf("watchRegion" to region))
 
     // Title pages. `/movie/{id}` and `/tv/{id}` include credits, videos and whether the user watchlisted it.
     fun movieDetail(id: Int) = Route("GET", "/movie/$id")
@@ -88,5 +98,6 @@ object Routes {
     // send them back to sign-in.
     fun deleteRequest(id: Int) = Route("DELETE", "/request/$id", requiresSession = false)
 
-    private fun paged(path: String, page: Int) = Route("GET", path, query = listOf("page" to "$page"))
+    private fun paged(path: String, page: Int, more: List<Pair<String, String>> = emptyList()) =
+        Route("GET", path, query = listOf("page" to "$page") + more)
 }

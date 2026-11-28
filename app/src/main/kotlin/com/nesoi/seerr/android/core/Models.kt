@@ -23,6 +23,9 @@ data class PublicSettings(
     val partialRequestsEnabled: Boolean = true,
     /** Whether season 0 can be requested. */
     val enableSpecialEpisodes: Boolean = false,
+    /** The server's region for Discover and for streaming services; a user's own isn't in here. */
+    val discoverRegion: String? = null,
+    val streamingRegion: String? = null,
 )
 
 @Serializable

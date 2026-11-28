@@ -42,8 +42,8 @@ class BrowseModelTest {
         server.enqueue(page(1, 1, movie(1)))
         server.enqueue(page(1, 1, series(2)))
 
-        BrowseModel(this, fixture.api, TitleType.Movie).grid.loadIfNeeded()
-        BrowseModel(this, fixture.api, TitleType.Series).grid.loadIfNeeded()
+        BrowseModel(this, fixture.api, TitleType.Movie).grid.value.loadIfNeeded()
+        BrowseModel(this, fixture.api, TitleType.Series).grid.value.loadIfNeeded()
 
         assertEquals("/api/v1/discover/movies", server.takeRequest().url.encodedPath)
         assertEquals("/api/v1/discover/tv", server.takeRequest().url.encodedPath)
@@ -92,5 +92,114 @@ class BrowseModelTest {
         assertEquals(5, server.requestCount)
         assertEquals(emptyList<MediaItem>(), loader.state.value.items)
         assertFalse(loader.state.value.isFailed)
+    }
+
+
+    @Test fun `applying filters reloads the grid with them`() = runTest {
+        server.enqueue(page(1, 1, movie(1)))
+        server.enqueue(page(1, 1, movie(2)))
+        val model = BrowseModel(this, fixture.api, TitleType.Movie)
+        runCurrent()
+        model.grid.value.loadIfNeeded()
+        server.takeRequest()
+
+        model.apply(DiscoverFilters(genres = setOf(28), minScore = 7))
+        model.grid.value.loadIfNeeded()
+
+        val request = server.takeRequest()
+        assertEquals("28", request.url.queryParameter("genre"))
+        assertEquals("7", request.url.queryParameter("voteAverageGte"))
+        assertEquals(listOf(2), model.grid.value.state.value.items.map { it.id })
+    }
+
+    @Test fun `saved filters survive a new model and keep the last used ones`() = runTest {
+        val storage = MemoryFilterStorage()
+        val first = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        runCurrent()
+        val scifi = DiscoverFilters(genres = setOf(878), yearFrom = 1990, yearTo = 1999)
+        first.save("90s sci-fi", scifi)
+        runCurrent()
+        first.apply(DiscoverFilters(minScore = 8))
+        runCurrent()
+
+        val second = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        runCurrent()
+        assertEquals(listOf("90s sci-fi"), second.saved.value.map { it.name })
+        assertEquals(scifi, second.saved.value.single().filters)
+        assertEquals(DiscoverFilters(minScore = 8), second.filters.value)
+    }
+
+    @Test fun `the first load uses the restored filters`() = runTest {
+        val storage = MemoryFilterStorage()
+        val first = BrowseModel(this, fixture.api, TitleType.Series, storage, "k")
+        runCurrent()
+        first.apply(DiscoverFilters(statuses = setOf(0)))
+        runCurrent()
+
+        server.enqueue(page(1, 1, series(1)))
+        val second = BrowseModel(this, fixture.api, TitleType.Series, storage, "k")
+        second.grid.value.loadIfNeeded()
+
+        assertEquals("0", server.takeRequest().url.queryParameter("status"))
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test fun `rename and delete change the saved list`() = runTest {
+        val storage = MemoryFilterStorage()
+        val model = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        runCurrent()
+        model.save("A", DiscoverFilters(minScore = 5))
+        model.save("  ", DiscoverFilters(minScore = 6))
+        model.save("B", DiscoverFilters(minScore = 7))
+        runCurrent()
+        assertEquals(listOf("A", "B"), model.saved.value.map { it.name })
+
+        model.rename(model.saved.value[0].id, "Good ones")
+        model.delete(model.saved.value[1].id)
+        runCurrent()
+
+        assertEquals(listOf("Good ones"), model.saved.value.map { it.name })
+        val reopened = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        runCurrent()
+        assertEquals(listOf("Good ones"), reopened.saved.value.map { it.name })
+    }
+
+    @Test fun `separate keys keep each tab and account apart`() = runTest {
+        val storage = MemoryFilterStorage()
+        val movies = BrowseModel(this, fixture.api, TitleType.Movie, storage, "a.movie")
+        runCurrent()
+        movies.save("Mine", DiscoverFilters(minScore = 5))
+        runCurrent()
+
+        val other = BrowseModel(this, fixture.api, TitleType.Movie, storage, "b.movie")
+        runCurrent()
+        assertEquals(emptyList<SavedFilter>(), other.saved.value)
+    }
+
+    @Test fun `the options load once and a region's services are kept`() = runTest {
+        server.enqueue(json("""[{"id":28,"name":"Action"},{"id":12,"name":"Adventure"}]"""))
+        server.enqueue(json("""[{"iso_639_1":"ja","english_name":"Japanese","name":"日本語"}]"""))
+        server.enqueue(json("""[{"iso_3166_1":"US","english_name":"United States"}]"""))
+        val options = FilterOptions(this, fixture.api, TitleType.Movie)
+
+        options.load()
+        withContext(Dispatchers.Default) { withTimeout(5_000) { options.regions.first { it != null } } }
+        withContext(Dispatchers.Default) { withTimeout(5_000) { options.genres.first { it != null } } }
+        withContext(Dispatchers.Default) { withTimeout(5_000) { options.languages.first { it != null } } }
+
+        assertEquals(listOf("Action", "Adventure"), options.genres.value?.map { it.name })
+        assertEquals("ja", options.languages.value?.single()?.code)
+        assertEquals("US", options.regions.value?.single()?.code)
+        val paths = List(3) { server.takeRequest().url.encodedPath }.sorted()
+        assertEquals(listOf("/api/v1/genres/movie", "/api/v1/languages", "/api/v1/regions"), paths)
+
+        server.enqueue(json("""[{"id":8,"name":"Netflix","logoPath":"/n.jpg","displayPriority":1}]"""))
+        options.loadProviders("US")
+        options.loadProviders("US")
+        withContext(Dispatchers.Default) { withTimeout(5_000) { options.providers.first { "US" in it } } }
+        val request = server.takeRequest()
+        assertEquals("/api/v1/watchproviders/movies", request.url.encodedPath)
+        assertEquals("US", request.url.queryParameter("watchRegion"))
+        assertEquals(4, server.requestCount)
     }
 }

@@ -133,6 +133,20 @@ object Routes {
     /** Everyone, by display name, for requesting on someone's behalf. */
     fun usersForRequest(take: Int = 1000) = Route("GET", "/user", query = listOf("take" to "$take", "sort" to "displayname"))
 
+    // User management, for people with Manage Users.
+    fun users(skip: Int, take: Int, query: String?) = Route(
+        "GET", "/user",
+        query = listOfNotNull("take" to "$take", "skip" to "$skip", "sort" to "displayname", query?.takeIf { it.isNotEmpty() }?.let { "q" to it }),
+    )
+
+    fun user(id: Int) = Route("GET", "/user/$id")
+    fun deleteUser(id: Int) = Route("DELETE", "/user/$id")
+    fun saveUserPermissions(id: Int, permissions: Int) =
+        Route("POST", "/user/$id/settings/permissions", buildJsonObject { put("permissions", permissions) })
+
+    /** Replaces every setting with what is sent, so send the whole of what [userGeneralSettings] gave. */
+    fun saveUserGeneralSettings(id: Int, body: JsonObject) = Route("POST", "/user/$id/settings/main", body)
+
     /** The requests list pages by offset, not page number. */
     fun requests(skip: Int, take: Int, filter: String, sort: String) =
         Route("GET", "/request", query = listOf("take" to "$take", "skip" to "$skip", "filter" to filter, "sort" to sort, "sortDirection" to "desc"))

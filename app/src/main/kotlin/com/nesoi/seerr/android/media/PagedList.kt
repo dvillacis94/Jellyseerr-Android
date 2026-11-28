@@ -69,6 +69,20 @@ class PagedList<T>(
         }
     }
 
+    /** Drops a row the server no longer has. Later rows move up, so the next offset does too. */
+    fun remove(item: T) {
+        val id = key(item)
+        if (!seen.remove(id)) return
+        offset = (offset - 1).coerceAtLeast(0)
+        _state.update { current -> current.copy(items = current.items.filterNot { key(it) == id }) }
+    }
+
+    /** Swaps in a newer copy of a row that is showing. */
+    fun replace(item: T) {
+        val id = key(item)
+        _state.update { current -> current.copy(items = current.items.map { if (key(it) == id) item else it }) }
+    }
+
     private suspend fun loadMore() {
         val current = _state.value
         if (!current.hasMore || current.isLoading) return

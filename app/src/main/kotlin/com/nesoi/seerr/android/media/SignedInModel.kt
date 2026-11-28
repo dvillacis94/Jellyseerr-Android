@@ -8,6 +8,8 @@ import com.nesoi.seerr.android.core.net.fetch
 import com.nesoi.seerr.android.issues.IssueDetailModel
 import com.nesoi.seerr.android.issues.Issue
 import com.nesoi.seerr.android.issues.IssuesModel
+import com.nesoi.seerr.android.users.UserEditModel
+import com.nesoi.seerr.android.users.UsersModel
 import com.nesoi.seerr.android.issues.ReportIssueModel
 import com.nesoi.seerr.android.notifications.NotificationSettingsModel
 import com.nesoi.seerr.android.requests.RequestsModel
@@ -41,6 +43,9 @@ class SignedInModel(
     val requests = RequestsModel(scope, api, user)
     val notifications = NotificationSettingsModel(api, user) { settings.value }
     val issues = IssuesModel(api, user)
+
+    /** The Users list, for people with Manage Users. */
+    val users = UsersModel(api, user)
     private val region: () -> String? = { _settings.value?.streamingRegion?.takeIf { it.isNotEmpty() } ?: _settings.value?.discoverRegion?.takeIf { it.isNotEmpty() } }
     val movies = BrowseModel(scope, api, TitleType.Movie, filterStorage, "filters.$storageScope.${TitleType.Movie.path}", region)
     val series = BrowseModel(scope, api, TitleType.Series, filterStorage, "filters.$storageScope.${TitleType.Series.path}", region)
@@ -86,6 +91,9 @@ class SignedInModel(
 
     /** An issue's page. A new one each time, so it starts from what the server says now; the list reloads after changes. */
     fun issueDetail(id: Int, initial: Issue? = null) = IssueDetailModel(scope, api, id, issues.rules, initial, onChanged = issues::reload)
+
+    /** A user's page. A new one each time, so it starts from what the server says now. */
+    fun userEdit(user: User) = UserEditModel(api, user, this.user, settings.value)
 
     /** The sheet for reporting a problem with a title. A new one each time. */
     fun reportIssueModel(details: TitleDetails) = ReportIssueModel(scope, api, details, onReported = issues::reload)

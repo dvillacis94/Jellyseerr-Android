@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ReportProblem
@@ -60,6 +61,8 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     /** Null when this person can't see issues. */
     onOpenIssues: (() -> Unit)?,
+    /** Null when this person can't manage users. */
+    onOpenUsers: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var confirming by remember { mutableStateOf<Leave?>(null) }
@@ -83,6 +86,10 @@ fun ProfileScreen(
 
         if (onOpenIssues != null) {
             NavRow(Icons.Filled.ReportProblem, stringResource(R.string.profile_issues), onOpenIssues)
+        }
+
+        if (onOpenUsers != null) {
+            NavRow(Icons.Filled.Group, stringResource(R.string.profile_users), onOpenUsers)
         }
 
         Section(stringResource(R.string.profile_appearance), footer = stringResource(R.string.profile_appearance_footer)) {
@@ -139,8 +146,8 @@ private enum class Leave { SignOut, ChangeServer }
 
 /** The avatar, or a person-shaped placeholder when there is none or it hasn't loaded. */
 @Composable
-private fun Avatar(url: String?) {
-    Box(Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+internal fun Avatar(url: String?, size: androidx.compose.ui.unit.Dp = 56.dp) {
+    Box(Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         Icon(Icons.Filled.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         if (url != null) AsyncImage(url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
     }

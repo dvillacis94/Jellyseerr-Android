@@ -5,6 +5,7 @@ import com.nesoi.seerr.android.core.User
 import com.nesoi.seerr.android.core.net.ApiClient
 import com.nesoi.seerr.android.core.net.Routes
 import com.nesoi.seerr.android.core.net.fetch
+import com.nesoi.seerr.android.notifications.NotificationSettingsModel
 import com.nesoi.seerr.android.requests.RequestsModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ class SignedInModel(
     val discover = DiscoverModel(scope, api)
     val search = SearchModel(scope, api)
     val requests = RequestsModel(scope, api, user)
+    val notifications = NotificationSettingsModel(api, user) { settings.value }
     private val region: () -> String? = { _settings.value?.streamingRegion?.takeIf { it.isNotEmpty() } ?: _settings.value?.discoverRegion?.takeIf { it.isNotEmpty() } }
     val movies = BrowseModel(scope, api, TitleType.Movie, filterStorage, "filters.$storageScope.${TitleType.Movie.path}", region)
     val series = BrowseModel(scope, api, TitleType.Series, filterStorage, "filters.$storageScope.${TitleType.Series.path}", region)

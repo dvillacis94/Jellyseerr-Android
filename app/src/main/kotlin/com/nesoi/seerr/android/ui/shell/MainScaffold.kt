@@ -36,6 +36,9 @@ import com.nesoi.seerr.android.media.SignedInModel
 import com.nesoi.seerr.android.ui.browse.BrowseScreen
 import com.nesoi.seerr.android.ui.detail.CollectionScreen
 import com.nesoi.seerr.android.ui.detail.TitleScreen
+import com.nesoi.seerr.android.notifications.NotificationChannel
+import com.nesoi.seerr.android.ui.notifications.NotificationChannelScreen
+import com.nesoi.seerr.android.ui.notifications.NotificationSettingsScreen
 import com.nesoi.seerr.android.ui.profile.ProfileScreen
 import com.nesoi.seerr.android.ui.requests.RequestsScreen
 import com.nesoi.seerr.android.ui.theme.Appearance
@@ -56,9 +59,10 @@ private const val LIST_ROUTE = "list"
 private const val MOVIE_ROUTE = "movie"
 private const val TV_ROUTE = "tv"
 private const val COLLECTION_ROUTE = "collection"
+private const val NOTIFICATIONS_ROUTE = "notifications"
 
 /** Pages pushed over a tab. They cover the tab bar, as on iOS. */
-private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE)
+private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE)
 
 @Composable
 fun MainScaffold(
@@ -109,7 +113,16 @@ fun MainScaffold(
             composable(AppTab.Series.route) { BrowseScreen(model.series, onOpen = open) }
             composable(AppTab.Requests.route) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
             composable(AppTab.Profile.route) {
-                ProfileScreen(user, serverUrl, settings?.applicationTitle, appearance, onAppearance, onSignOut, onChangeServer)
+                ProfileScreen(
+                    user, serverUrl, settings?.applicationTitle, appearance, onAppearance, onSignOut, onChangeServer,
+                    onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
+                )
+            }
+            composable(NOTIFICATIONS_ROUTE) {
+                NotificationSettingsScreen(model.notifications, onBack = back, onOpen = { navController.navigate("$NOTIFICATIONS_ROUTE/${it.key}") })
+            }
+            composable("$NOTIFICATIONS_ROUTE/{channel}") { entry ->
+                NotificationChannel.from(entry.arguments?.getString("channel"))?.let { NotificationChannelScreen(model.notifications, it, onBack = back) }
             }
             composable("$LIST_ROUTE/{list}") { entry ->
                 val list = entry.arguments?.getString("list")?.let { name -> MediaList.entries.firstOrNull { it.name == name } }

@@ -80,6 +80,24 @@ object Routes {
     fun userNotificationSettings(userId: Int) = Route("GET", "/user/$userId/settings/notifications")
     fun saveNotificationSettings(userId: Int, body: JsonObject) = Route("POST", "/user/$userId/settings/notifications", body)
 
+    // Issues. Seerr answers some refused changes with 401, which is no reason to sign the user out.
+    fun issues(skip: Int, take: Int, filter: String, sort: String) =
+        Route("GET", "/issue", query = listOf("take" to "$take", "skip" to "$skip", "filter" to filter, "sort" to sort))
+
+    fun issue(id: Int) = Route("GET", "/issue/$id")
+
+    /** `status` is `open` or `resolved`. */
+    fun setIssueStatus(id: Int, status: String) = Route("POST", "/issue/$id/$status", requiresSession = false)
+    fun deleteIssue(id: Int) = Route("DELETE", "/issue/$id", requiresSession = false)
+
+    fun addIssueComment(issueId: Int, message: String) =
+        Route("POST", "/issue/$issueId/comment", buildJsonObject { put("message", message) }, requiresSession = false)
+
+    fun updateIssueComment(id: Int, message: String) =
+        Route("PUT", "/issueComment/$id", buildJsonObject { put("message", message) }, requiresSession = false)
+
+    fun deleteIssueComment(id: Int) = Route("DELETE", "/issueComment/$id", requiresSession = false)
+
     // Requests.
     fun userQuota(userId: Int) = Route("GET", "/user/$userId/quota")
 

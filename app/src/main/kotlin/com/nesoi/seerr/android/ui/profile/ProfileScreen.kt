@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -57,6 +58,8 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     onChangeServer: () -> Unit,
     onOpenNotifications: () -> Unit,
+    /** Null when this person can't see issues. */
+    onOpenIssues: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     var confirming by remember { mutableStateOf<Leave?>(null) }
@@ -76,10 +79,10 @@ fun ProfileScreen(
             }
         }
 
-        Row(Modifier.fillMaxWidth().clickable(onClick = onOpenNotifications).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.profile_notifications), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        NavRow(Icons.Filled.Notifications, stringResource(R.string.profile_notifications), onOpenNotifications)
+
+        if (onOpenIssues != null) {
+            NavRow(Icons.Filled.ReportProblem, stringResource(R.string.profile_issues), onOpenIssues)
         }
 
         Section(stringResource(R.string.profile_appearance), footer = stringResource(R.string.profile_appearance_footer)) {
@@ -120,6 +123,15 @@ fun ProfileScreen(
             },
             dismissButton = { TextButton(onClick = { confirming = null }) { Text(stringResource(R.string.filters_cancel)) } },
         )
+    }
+}
+
+@Composable
+private fun NavRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

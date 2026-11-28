@@ -14,6 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -37,6 +38,8 @@ import com.nesoi.seerr.android.ui.browse.BrowseScreen
 import com.nesoi.seerr.android.ui.detail.CollectionScreen
 import com.nesoi.seerr.android.ui.detail.TitleScreen
 import com.nesoi.seerr.android.notifications.NotificationChannel
+import com.nesoi.seerr.android.ui.issues.IssueDetailScreen
+import com.nesoi.seerr.android.ui.issues.IssuesScreen
 import com.nesoi.seerr.android.ui.notifications.NotificationChannelScreen
 import com.nesoi.seerr.android.ui.notifications.NotificationSettingsScreen
 import com.nesoi.seerr.android.ui.profile.ProfileScreen
@@ -60,9 +63,10 @@ private const val MOVIE_ROUTE = "movie"
 private const val TV_ROUTE = "tv"
 private const val COLLECTION_ROUTE = "collection"
 private const val NOTIFICATIONS_ROUTE = "notifications"
+private const val ISSUES_ROUTE = "issues"
 
 /** Pages pushed over a tab. They cover the tab bar, as on iOS. */
-private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE)
+private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE, NOTIFICATIONS_ROUTE, ISSUES_ROUTE)
 
 @Composable
 fun MainScaffold(
@@ -116,6 +120,7 @@ fun MainScaffold(
                 ProfileScreen(
                     user, serverUrl, settings?.applicationTitle, appearance, onAppearance, onSignOut, onChangeServer,
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
+                    onOpenIssues = if (model.issues.rules.canViewIssues) ({ navController.navigate(ISSUES_ROUTE) }) else null,
                 )
             }
             composable(NOTIFICATIONS_ROUTE) {
@@ -123,6 +128,15 @@ fun MainScaffold(
             }
             composable("$NOTIFICATIONS_ROUTE/{channel}") { entry ->
                 NotificationChannel.from(entry.arguments?.getString("channel"))?.let { NotificationChannelScreen(model.notifications, it, onBack = back) }
+            }
+            composable(ISSUES_ROUTE) {
+                IssuesScreen(model.issues, onBack = back, onOpen = { navController.navigate("$ISSUES_ROUTE/${it.id}") })
+            }
+            composable("$ISSUES_ROUTE/{id}", arguments = idArgument) { entry ->
+                entry.arguments?.getInt("id")?.let { id ->
+                    val detail = remember(id) { model.issueDetail(id, model.issues.list.value.state.value.items.firstOrNull { it.id == id }?.issue) }
+                    IssueDetailScreen(detail, onBack = back, onOpenTitle = { navController.navigate(it) })
+                }
             }
             composable("$LIST_ROUTE/{list}") { entry ->
                 val list = entry.arguments?.getString("list")?.let { name -> MediaList.entries.firstOrNull { it.name == name } }

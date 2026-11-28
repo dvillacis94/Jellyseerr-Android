@@ -77,6 +77,7 @@ object Permission {
     const val AUTO_APPROVE_4K_TV = 131072
     const val REQUEST_TV = 524288
     const val MANAGE_ISSUES = 1048576
+    const val VIEW_ISSUES = 2097152
     const val CREATE_ISSUES = 4194304
     const val AUTO_REQUEST = 8388608
     const val AUTO_REQUEST_MOVIE = 16777216

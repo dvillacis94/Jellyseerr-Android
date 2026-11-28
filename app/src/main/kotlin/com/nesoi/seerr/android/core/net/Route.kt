@@ -75,6 +75,11 @@ object Routes {
     fun removeWatchlist(tmdbId: Int, mediaType: String) =
         Route("DELETE", "/watchlist/$tmdbId", query = listOf("mediaType" to mediaType))
 
+    // The signed-in user's settings.
+    fun userGeneralSettings(userId: Int) = Route("GET", "/user/$userId/settings/main")
+    fun userNotificationSettings(userId: Int) = Route("GET", "/user/$userId/settings/notifications")
+    fun saveNotificationSettings(userId: Int, body: JsonObject) = Route("POST", "/user/$userId/settings/notifications", body)
+
     // Requests.
     fun userQuota(userId: Int) = Route("GET", "/user/$userId/quota")
 

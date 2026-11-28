@@ -21,6 +21,8 @@ data class DiscoverFilters(
     val region: String? = null,
     /** Series only: TMDB's status codes. */
     val statuses: Set<Int> = emptySet(),
+    /** Only titles this many people voted on. Not something the user picks: "Top rated" sets it. */
+    val voteCountMin: Int? = null,
 ) {
     /** How many filters are on, for the badge. The region only matters with services chosen. */
     fun activeCount(): Int = listOf(
@@ -54,6 +56,7 @@ data class DiscoverFilters(
             add("watchProviders" to providers.sorted().joinToString("|"))
             region?.let { add("watchRegion" to it) }
         }
+        voteCountMin?.let { add("voteCountGte" to "$it") }
         if (type == TitleType.Series && statuses.isNotEmpty()) add("status" to statuses.sorted().joinToString("|"))
     }
 

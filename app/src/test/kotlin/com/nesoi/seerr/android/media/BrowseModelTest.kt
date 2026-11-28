@@ -45,8 +45,8 @@ class BrowseModelTest {
         server.enqueue(page(1, 1, movie(1)))
         server.enqueue(page(1, 1, series(2)))
 
-        BrowseModel(this, fixture.api, TitleType.Movie).grid.value.loadIfNeeded()
-        BrowseModel(this, fixture.api, TitleType.Series).grid.value.loadIfNeeded()
+        BrowseModel(backgroundScope, fixture.api, TitleType.Movie).grid.value.loadIfNeeded()
+        BrowseModel(backgroundScope, fixture.api, TitleType.Series).grid.value.loadIfNeeded()
 
         assertEquals("/api/v1/discover/movies", server.takeRequest().url.encodedPath)
         assertEquals("/api/v1/discover/tv", server.takeRequest().url.encodedPath)
@@ -54,7 +54,7 @@ class BrowseModelTest {
 
     @Test fun `movie search drops everything but movies`() = runTest {
         server.enqueue(page(1, 1, movie(1), series(2), person(3), movie(4)))
-        val model = BrowseModel(this, fixture.api, TitleType.Movie)
+        val model = BrowseModel(backgroundScope, fixture.api, TitleType.Movie)
 
         model.search.setQuery("x")
         model.search.submit()
@@ -69,7 +69,7 @@ class BrowseModelTest {
         server.enqueue(page(1, 3, movie(1), person(2)))
         server.enqueue(page(2, 3, movie(3)))
         server.enqueue(page(3, 3, series(4), series(5)))
-        val model = BrowseModel(this, fixture.api, TitleType.Series)
+        val model = BrowseModel(backgroundScope, fixture.api, TitleType.Series)
 
         model.search.setQuery("x")
         model.search.submit()
@@ -84,7 +84,7 @@ class BrowseModelTest {
 
     @Test fun `it stops looking after a few empty pages`() = runTest {
         repeat(10) { server.enqueue(page(it + 1, 10, person(it))) }
-        val model = BrowseModel(this, fixture.api, TitleType.Movie)
+        val model = BrowseModel(backgroundScope, fixture.api, TitleType.Movie)
 
         model.search.setQuery("x")
         model.search.submit()
@@ -101,7 +101,7 @@ class BrowseModelTest {
     @Test fun `applying filters reloads the grid with them`() = runTest {
         server.enqueue(page(1, 1, movie(1)))
         server.enqueue(page(1, 1, movie(2)))
-        val model = BrowseModel(this, fixture.api, TitleType.Movie)
+        val model = BrowseModel(backgroundScope, fixture.api, TitleType.Movie)
         runCurrent()
         model.grid.value.loadIfNeeded()
         server.takeRequest()
@@ -117,7 +117,7 @@ class BrowseModelTest {
 
     @Test fun `saved filters survive a new model and keep the last used ones`() = runTest {
         val storage = MemoryPreferences()
-        val first = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        val first = BrowseModel(backgroundScope, fixture.api, TitleType.Movie, storage, "k")
         runCurrent()
         val scifi = DiscoverFilters(genres = setOf(878), yearFrom = 1990, yearTo = 1999)
         first.save("90s sci-fi", scifi)
@@ -125,7 +125,7 @@ class BrowseModelTest {
         first.apply(DiscoverFilters(minScore = 8))
         runCurrent()
 
-        val second = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        val second = BrowseModel(backgroundScope, fixture.api, TitleType.Movie, storage, "k")
         runCurrent()
         assertEquals(listOf("90s sci-fi"), second.saved.value.map { it.name })
         assertEquals(scifi, second.saved.value.single().filters)
@@ -134,13 +134,13 @@ class BrowseModelTest {
 
     @Test fun `the first load uses the restored filters`() = runTest {
         val storage = MemoryPreferences()
-        val first = BrowseModel(this, fixture.api, TitleType.Series, storage, "k")
+        val first = BrowseModel(backgroundScope, fixture.api, TitleType.Series, storage, "k")
         runCurrent()
         first.apply(DiscoverFilters(statuses = setOf(0)))
         runCurrent()
 
         server.enqueue(page(1, 1, series(1)))
-        val second = BrowseModel(this, fixture.api, TitleType.Series, storage, "k")
+        val second = BrowseModel(backgroundScope, fixture.api, TitleType.Series, storage, "k")
         second.grid.value.loadIfNeeded()
 
         assertEquals("0", server.takeRequest().url.queryParameter("status"))
@@ -149,7 +149,7 @@ class BrowseModelTest {
 
     @Test fun `rename and delete change the saved list`() = runTest {
         val storage = MemoryPreferences()
-        val model = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        val model = BrowseModel(backgroundScope, fixture.api, TitleType.Movie, storage, "k")
         runCurrent()
         model.save("A", DiscoverFilters(minScore = 5))
         model.save("  ", DiscoverFilters(minScore = 6))
@@ -162,19 +162,19 @@ class BrowseModelTest {
         runCurrent()
 
         assertEquals(listOf("Good ones"), model.saved.value.map { it.name })
-        val reopened = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
+        val reopened = BrowseModel(backgroundScope, fixture.api, TitleType.Movie, storage, "k")
         runCurrent()
         assertEquals(listOf("Good ones"), reopened.saved.value.map { it.name })
     }
 
     @Test fun `separate keys keep each tab and account apart`() = runTest {
         val storage = MemoryPreferences()
-        val movies = BrowseModel(this, fixture.api, TitleType.Movie, storage, "a.movie")
+        val movies = BrowseModel(backgroundScope, fixture.api, TitleType.Movie, storage, "a.movie")
         runCurrent()
         movies.save("Mine", DiscoverFilters(minScore = 5))
         runCurrent()
 
-        val other = BrowseModel(this, fixture.api, TitleType.Movie, storage, "b.movie")
+        val other = BrowseModel(backgroundScope, fixture.api, TitleType.Movie, storage, "b.movie")
         runCurrent()
         assertEquals(emptyList<SavedFilter>(), other.saved.value)
     }

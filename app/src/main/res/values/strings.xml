@@ -49,6 +49,16 @@
     <string name="tab_profile">Profile</string>
 
     <string name="discover_search_hint">Movies, series, people</string>
+    <string name="browse_top_results">Top Results</string>
+    <string name="browse_top_rated_movies">Top Rated Movies</string>
+    <string name="browse_top_rated_series">Top Rated Series</string>
+    <string name="browse_show_all">Show all</string>
+    <string name="browse_show_sections">Show sections</string>
+    <string name="browse_no_match_movies">No movies match these filters.</string>
+    <string name="browse_no_match_series">No series match these filters.</string>
+    <string name="browse_filters_count">%1$d filters</string>
+    <string name="browse_one_filter">1 filter</string>
+    <string name="browse_clear_filters">Clear</string>
     <string name="browse_search_movies">Search movies</string>
     <string name="browse_search_series">Search series</string>
     <string name="discover_search_clear">Clear search</string>

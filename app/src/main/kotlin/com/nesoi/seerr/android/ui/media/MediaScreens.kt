@@ -86,11 +86,17 @@ fun MediaShelf(
 /** A full list as a grid that keeps loading as the user scrolls. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit, onOpen: (MediaItem) -> Unit) {
+fun MediaGridScreen(list: MediaList, loader: PagedLoader, onBack: () -> Unit, onOpen: (MediaItem) -> Unit) =
+    MediaGridScreen(stringResource(list.title), loader, onBack, onOpen)
+
+/** A full list under [title] as a grid that keeps loading as the user scrolls. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MediaGridScreen(title: String, loader: PagedLoader, onBack: () -> Unit, onOpen: (MediaItem) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(list.title)) },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.list_back))

@@ -1,6 +1,14 @@
 package com.nesoi.seerr.android.ui.shell
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.Dp
+import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraphBuilder
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Movie
@@ -91,21 +99,25 @@ fun MainScaffold(
     val back: () -> Unit = { navController.popBackStack() }
     val settings by model.settings.collectAsStateWithLifecycle()
 
+    val wide = isWideWindow()
+    val onTab = { tab: AppTab ->
+        navController.navigate(tab.route) {
+            // Each tab keeps where it was.
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     Scaffold(
         bottomBar = {
-            if (pushedRoutes.none { destination?.route?.let { route -> route == it || route.startsWith("$it/") } == true }) {
+            // A phone's bar hides under pushed pages, as on iOS; a tablet's rail stays.
+            if (!wide && pushedRoutes.none { destination?.route?.let { route -> route == it || route.startsWith("$it/") } == true }) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
                             selected = destination?.hierarchy?.any { it.route == tab.route } == true,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    // Each tab keeps where it was.
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { onTab(tab) },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(stringResource(tab.label)) },
                         )
@@ -114,14 +126,29 @@ fun MainScaffold(
             }
         },
     ) { padding ->
-        NavHost(navController, startDestination = AppTab.Discover.route, modifier = Modifier.padding(padding)) {
+      Row(Modifier.padding(padding)) {
+        if (wide) {
+            NavigationRail {
+                Spacer(Modifier.weight(1f))
+                AppTab.entries.forEach { tab ->
+                    NavigationRailItem(
+                        selected = destination?.hierarchy?.any { it.route == tab.route } == true,
+                        onClick = { onTab(tab) },
+                        icon = { Icon(tab.icon, contentDescription = null) },
+                        label = { Text(stringResource(tab.label)) },
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+            }
+        }
+        NavHost(navController, startDestination = AppTab.Discover.route, modifier = Modifier.weight(1f)) {
             composable(AppTab.Discover.route) {
                 DiscoverScreen(model, onSeeAll = { navController.navigate("$LIST_ROUTE/${it.name}") }, onOpen = open)
             }
             composable(AppTab.Movies.route) { BrowseScreen(model.movies, onOpen = open, onSeeAll = { navController.navigate("$SECTION_ROUTE/${TitleType.Movie.path}/${it.key}") }) }
             composable(AppTab.Series.route) { BrowseScreen(model.series, onOpen = open, onSeeAll = { navController.navigate("$SECTION_ROUTE/${TitleType.Series.path}/${it.key}") }) }
-            composable(AppTab.Requests.route) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
-            composable(AppTab.Profile.route) {
+            narrowComposable(AppTab.Requests.route, ListWidth) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
+            narrowComposable(AppTab.Profile.route) {
                 ProfileScreen(
                     user, serverUrl, settings?.applicationTitle, appearance, onAppearance, onSignOut, onChangeServer,
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
@@ -129,26 +156,26 @@ fun MainScaffold(
                     onOpenUsers = if (model.users.rules.canManageUsers) ({ navController.navigate(USERS_ROUTE) }) else null,
                 )
             }
-            composable(NOTIFICATIONS_ROUTE) {
+            narrowComposable(NOTIFICATIONS_ROUTE) {
                 NotificationSettingsScreen(model.notifications, onBack = back, onOpen = { navController.navigate("$NOTIFICATIONS_ROUTE/${it.key}") })
             }
-            composable("$NOTIFICATIONS_ROUTE/{channel}") { entry ->
+            narrowComposable("$NOTIFICATIONS_ROUTE/{channel}") { entry ->
                 NotificationChannel.from(entry.arguments?.getString("channel"))?.let { NotificationChannelScreen(model.notifications, it, onBack = back) }
             }
-            composable(ISSUES_ROUTE) {
+            narrowComposable(ISSUES_ROUTE, ListWidth) {
                 IssuesScreen(model.issues, onBack = back, onOpen = { navController.navigate("$ISSUES_ROUTE/${it.id}") })
             }
-            composable(USERS_ROUTE) {
+            narrowComposable(USERS_ROUTE, ListWidth) {
                 UsersScreen(model.users, serverUrl, onBack = back, onOpen = { navController.navigate("$USERS_ROUTE/${it.id}") })
             }
-            composable("$USERS_ROUTE/{id}", arguments = idArgument) { entry ->
+            narrowComposable("$USERS_ROUTE/{id}", ReadingWidth, idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->
                     // Opened from the list, so the row is there; a bare id has nothing to show.
                     val edit = remember(id) { model.users.list.value.state.value.items.firstOrNull { it.id == id }?.let(model::userEdit) }
                     if (edit != null) UserEditScreen(edit, serverUrl, onBack = back, onSaved = model.users::didUpdate)
                 }
             }
-            composable("$ISSUES_ROUTE/{id}", arguments = idArgument) { entry ->
+            narrowComposable("$ISSUES_ROUTE/{id}", ListWidth, idArgument) { entry ->
                 entry.arguments?.getInt("id")?.let { id ->
                     val detail = remember(id) { model.issueDetail(id, model.issues.list.value.state.value.items.firstOrNull { it.id == id }?.issue) }
                     IssueDetailScreen(detail, onBack = back, onOpenTitle = { navController.navigate(it) })
@@ -193,7 +220,16 @@ fun MainScaffold(
                 entry.arguments?.getInt("id")?.let { id -> CollectionScreen(model.collection(id), back, open) }
             }
         }
+      }
     }
 }
+
+/** A page whose content is capped to [max] wide and centred, so a tablet doesn't stretch it. */
+private fun NavGraphBuilder.narrowComposable(
+    route: String,
+    max: Dp = ReadingWidth,
+    arguments: List<NamedNavArgument> = emptyList(),
+    content: @Composable (NavBackStackEntry) -> Unit,
+) = composable(route, arguments = arguments) { entry -> ContentWidth(max) { content(entry) } }
 
 private val idArgument = listOf(navArgument("id") { type = NavType.IntType })

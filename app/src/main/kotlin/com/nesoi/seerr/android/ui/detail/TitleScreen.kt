@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -214,9 +215,15 @@ private fun TitleContent(
     val uri = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var requesting by remember { mutableStateOf<RequestModel?>(null) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Header(details)
 
+        // On a tablet the page reads as one centred column under the full-width backdrop.
+        Column(Modifier.widthIn(max = TitleWidth).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (details.canBeRequestedBy(user, settings)) {
                 Button(onClick = { requesting = newRequest(details) }, modifier = Modifier.fillMaxWidth()) {
@@ -244,6 +251,7 @@ private fun TitleContent(
         CastShelf(details.credits?.cast.orEmpty())
         MediaShelf(stringResource(R.string.shelf_recommendations), model.recommendations, onOpen)
         MediaShelf(stringResource(R.string.shelf_similar), model.similar, onOpen)
+        }
     }
 
     requesting?.let { request ->
@@ -255,6 +263,9 @@ private fun TitleContent(
         )
     }
 }
+
+/** The widest the title page's text column gets. */
+private val TitleWidth = 840.dp
 
 /** The backdrop, with the poster, title and a line of facts under it. */
 @Composable
@@ -272,7 +283,7 @@ private fun Header(details: TitleDetails) {
             )
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 0.dp),
+            Modifier.align(Alignment.CenterHorizontally).widthIn(max = TitleWidth).fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             PosterImage(TmdbImage.poster(details.posterPath), Modifier.width(110.dp).padding(top = 0.dp))

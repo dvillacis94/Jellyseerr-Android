@@ -116,7 +116,7 @@ class BrowseModelTest {
     }
 
     @Test fun `saved filters survive a new model and keep the last used ones`() = runTest {
-        val storage = MemoryFilterStorage()
+        val storage = MemoryPreferences()
         val first = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
         runCurrent()
         val scifi = DiscoverFilters(genres = setOf(878), yearFrom = 1990, yearTo = 1999)
@@ -133,7 +133,7 @@ class BrowseModelTest {
     }
 
     @Test fun `the first load uses the restored filters`() = runTest {
-        val storage = MemoryFilterStorage()
+        val storage = MemoryPreferences()
         val first = BrowseModel(this, fixture.api, TitleType.Series, storage, "k")
         runCurrent()
         first.apply(DiscoverFilters(statuses = setOf(0)))
@@ -148,7 +148,7 @@ class BrowseModelTest {
     }
 
     @Test fun `rename and delete change the saved list`() = runTest {
-        val storage = MemoryFilterStorage()
+        val storage = MemoryPreferences()
         val model = BrowseModel(this, fixture.api, TitleType.Movie, storage, "k")
         runCurrent()
         model.save("A", DiscoverFilters(minScore = 5))
@@ -168,7 +168,7 @@ class BrowseModelTest {
     }
 
     @Test fun `separate keys keep each tab and account apart`() = runTest {
-        val storage = MemoryFilterStorage()
+        val storage = MemoryPreferences()
         val movies = BrowseModel(this, fixture.api, TitleType.Movie, storage, "a.movie")
         runCurrent()
         movies.save("Mine", DiscoverFilters(minScore = 5))

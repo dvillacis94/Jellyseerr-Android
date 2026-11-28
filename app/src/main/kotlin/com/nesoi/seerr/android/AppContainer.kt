@@ -9,7 +9,7 @@ import com.nesoi.seerr.android.auth.PlexClientInfo
 import com.nesoi.seerr.android.core.net.ApiClient
 import com.nesoi.seerr.android.core.net.KeystoreSecureStore
 import com.nesoi.seerr.android.core.net.SessionCookieJar
-import com.nesoi.seerr.android.media.DataStoreFilterStorage
+import com.nesoi.seerr.android.media.DataStorePreferences
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import java.util.UUID
@@ -26,7 +26,7 @@ class AppContainer(private val context: Context) {
 
     val api = ApiClient(http, cookies)
 
-    val filterStorage = DataStoreFilterStorage(context)
+    val filterStorage = DataStorePreferences(context)
 
     val authService = AuthService(api, cookies, DataStoreServerPreferences(context))
 

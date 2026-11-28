@@ -19,7 +19,7 @@ class SignedInModel(
     private val scope: CoroutineScope,
     private val api: ApiClient,
     val user: User,
-    filterStorage: FilterStorage = MemoryFilterStorage(),
+    filterStorage: PreferenceStorage = MemoryPreferences(),
     /** Tells one server and user's saved filters from another's. */
     storageScope: String = "local",
 ) {

@@ -1,8 +1,5 @@
 package com.nesoi.seerr.android.ui.shell
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
@@ -10,22 +7,16 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -45,7 +36,10 @@ import com.nesoi.seerr.android.media.SignedInModel
 import com.nesoi.seerr.android.ui.browse.BrowseScreen
 import com.nesoi.seerr.android.ui.detail.CollectionScreen
 import com.nesoi.seerr.android.ui.detail.TitleScreen
+import com.nesoi.seerr.android.ui.profile.ProfileScreen
 import com.nesoi.seerr.android.ui.requests.RequestsScreen
+import com.nesoi.seerr.android.ui.theme.Appearance
+import okhttp3.HttpUrl
 import com.nesoi.seerr.android.ui.discover.DiscoverScreen
 import com.nesoi.seerr.android.ui.media.MediaGridScreen
 
@@ -67,7 +61,15 @@ private const val COLLECTION_ROUTE = "collection"
 private val pushedRoutes = listOf(LIST_ROUTE, MOVIE_ROUTE, TV_ROUTE, COLLECTION_ROUTE)
 
 @Composable
-fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChangeServer: () -> Unit) {
+fun MainScaffold(
+    user: User,
+    serverUrl: HttpUrl,
+    model: SignedInModel,
+    appearance: Appearance,
+    onAppearance: (Appearance) -> Unit,
+    onSignOut: () -> Unit,
+    onChangeServer: () -> Unit,
+) {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val destination = backStack?.destination
@@ -106,7 +108,9 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
             composable(AppTab.Movies.route) { BrowseScreen(model.movies, onOpen = open) }
             composable(AppTab.Series.route) { BrowseScreen(model.series, onOpen = open) }
             composable(AppTab.Requests.route) { RequestsScreen(model.requests, onOpen = { navController.navigate(it) }) }
-            composable(AppTab.Profile.route) { ProfileScreen(user, onSignOut, onChangeServer) }
+            composable(AppTab.Profile.route) {
+                ProfileScreen(user, serverUrl, settings?.applicationTitle, appearance, onAppearance, onSignOut, onChangeServer)
+            }
             composable("$LIST_ROUTE/{list}") { entry ->
                 val list = entry.arguments?.getString("list")?.let { name -> MediaList.entries.firstOrNull { it.name == name } }
                 if (list != null) {
@@ -133,21 +137,3 @@ fun MainScaffold(user: User, model: SignedInModel, onSignOut: () -> Unit, onChan
 }
 
 private val idArgument = listOf(navArgument("id") { type = NavType.IntType })
-
-/** For now, just who is signed in and how to leave. The rest of Profile comes in a later phase. */
-@Composable
-private fun ProfileScreen(user: User, onSignOut: () -> Unit, onChangeServer: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            stringResource(R.string.home_signed_in_as, user.displayNameOrEmail),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        Button(onClick = onSignOut) { Text(stringResource(R.string.home_sign_out)) }
-        OutlinedButton(onClick = onChangeServer) { Text(stringResource(R.string.login_change_server)) }
-    }
-}

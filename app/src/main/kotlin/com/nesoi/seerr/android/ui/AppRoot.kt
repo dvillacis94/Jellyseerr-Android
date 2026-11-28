@@ -41,7 +41,18 @@ fun AppRoot(viewModel: AppViewModel) {
             Button(onClick = viewModel::start) { Text(stringResource(R.string.unreachable_retry)) }
             OutlinedButton(onClick = viewModel::changeServer) { Text(stringResource(R.string.login_change_server)) }
         }
-        is AppState.SignedIn -> MainScaffold(current.user, current.model, onSignOut = viewModel::signOut, onChangeServer = viewModel::changeServer)
+        is AppState.SignedIn -> {
+            val appearance by viewModel.appearance.collectAsStateWithLifecycle()
+            MainScaffold(
+                current.user,
+                current.serverUrl,
+                current.model,
+                appearance,
+                onAppearance = viewModel::setAppearance,
+                onSignOut = viewModel::signOut,
+                onChangeServer = viewModel::changeServer,
+            )
+        }
     }
 }
 

@@ -21,7 +21,7 @@ class BrowseModel(
     private val scope: CoroutineScope,
     private val api: ApiClient,
     val type: TitleType,
-    private val storage: FilterStorage = MemoryFilterStorage(),
+    private val storage: PreferenceStorage = MemoryPreferences(),
     private val storageKey: String = "filters.${type.path}",
     /** The region to start streaming services in: the user's, else the server's. */
     val defaultRegion: () -> String? = { null },

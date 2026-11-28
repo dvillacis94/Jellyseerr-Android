@@ -11,9 +11,10 @@ import com.nesoi.seerr.android.core.PublicSettings
 import com.nesoi.seerr.android.core.ServerInfo
 import com.nesoi.seerr.android.core.User
 import com.nesoi.seerr.android.core.net.ApiClient
-import com.nesoi.seerr.android.media.FilterStorage
-import com.nesoi.seerr.android.media.MemoryFilterStorage
+import com.nesoi.seerr.android.media.PreferenceStorage
+import com.nesoi.seerr.android.media.MemoryPreferences
 import com.nesoi.seerr.android.media.SignedInModel
+import com.nesoi.seerr.android.ui.theme.Appearance
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,17 +35,26 @@ class AppViewModel(
     private val auth: AuthService,
     private val plexFactory: (String?) -> PlexAuthService,
     private val api: ApiClient,
-    private val filters: FilterStorage = MemoryFilterStorage(),
+    private val preferences: PreferenceStorage = MemoryPreferences(),
 ) : ViewModel() {
     constructor(container: AppContainer) : this(container.authService, container::plexAuthService, container.api, container.filterStorage)
 
     private val _state = MutableStateFlow<AppState>(AppState.Loading)
     val state: StateFlow<AppState> = _state.asStateFlow()
 
+    private val _appearance = MutableStateFlow(Appearance.System)
+    val appearance: StateFlow<Appearance> = _appearance.asStateFlow()
+
     init {
         // A 401 from any call means the session ran out: go back to sign-in, once.
         auth.onSessionExpired = ::sessionExpired
+        viewModelScope.launch { _appearance.value = Appearance.from(preferences.read(Appearance.KEY)) }
         start()
+    }
+
+    fun setAppearance(appearance: Appearance) {
+        _appearance.value = appearance
+        viewModelScope.launch { preferences.write(Appearance.KEY, appearance.name) }
     }
 
     override fun onCleared() {
@@ -125,5 +135,5 @@ class AppViewModel(
         _state.value = AppState.Login(model)
     }
 
-    private fun signedIn(user: User, server: HttpUrl) = AppState.SignedIn(user, server, SignedInModel(viewModelScope, api, user, filters, "$server.${user.id}"))
+    private fun signedIn(user: User, server: HttpUrl) = AppState.SignedIn(user, server, SignedInModel(viewModelScope, api, user, preferences, "$server.${user.id}"))
 }
